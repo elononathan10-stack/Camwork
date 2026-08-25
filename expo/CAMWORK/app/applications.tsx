@@ -27,7 +27,13 @@ import { theme } from "@/components/theme";
 import { useUser, ApplicationItem } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
 
-type TabFilter = "All" | "Pending" | "Reviewed" | "Interviews" | "Accepted" | "Rejected";
+type TabFilter =
+  | "All"
+  | "Pending"
+  | "Reviewed"
+  | "Interviews"
+  | "Accepted"
+  | "Rejected";
 
 export default function ApplicationsScreen() {
   const { applications } = useUser();
@@ -119,7 +125,12 @@ export default function ApplicationsScreen() {
                 style={[styles.tabBtn, isActive && styles.tabBtnActive]}
                 onPress={() => setActiveTab(tab.key)}
               >
-                <Text style={[styles.tabBtnText, isActive && styles.tabBtnTextActive]}>
+                <Text
+                  style={[
+                    styles.tabBtnText,
+                    isActive && styles.tabBtnTextActive,
+                  ]}
+                >
                   {tab.label} ({count})
                 </Text>
               </TouchableOpacity>
@@ -130,6 +141,7 @@ export default function ApplicationsScreen() {
 
       {/* Applications List */}
       <FlatList
+        style={styles.applicationsList}
         data={filteredApps}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -154,7 +166,9 @@ export default function ApplicationsScreen() {
                     {item.companyName} • {item.location}
                   </Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+                <View
+                  style={[styles.statusBadge, { backgroundColor: badge.bg }]}
+                >
                   <IconComp size={12} color={badge.text} />
                   <Text style={[styles.statusBadgeText, { color: badge.text }]}>
                     {item.status.toUpperCase()}
@@ -243,7 +257,7 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 5,
     borderRadius: 20,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
@@ -265,6 +279,10 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 14,
   },
+  applicationsList: {
+    flex: 1,
+    minWidth: 0,
+  },
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -282,6 +300,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flexWrap: "wrap",
   },
   companyIconCircle: {
     width: 44,
@@ -298,6 +317,7 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   jobTitle: {
@@ -316,6 +336,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    flexShrink: 1,
   },
   statusBadgeText: {
     fontSize: 10,
@@ -343,6 +364,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
@@ -351,10 +374,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flex: 1,
+    minWidth: 0,
   },
   dateText: {
     fontSize: 12,
     color: "#94a3b8",
+    flexShrink: 1,
   },
   chatBtn: {
     flexDirection: "row",
@@ -364,11 +390,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
+    flexShrink: 1,
+    minHeight: 38,
+    justifyContent: "center",
   },
   chatBtnText: {
     fontSize: 12,
     fontWeight: "700",
     color: theme.colors.primary,
+    flexShrink: 1,
+    textAlign: "center",
   },
   emptyContainer: {
     alignItems: "center",

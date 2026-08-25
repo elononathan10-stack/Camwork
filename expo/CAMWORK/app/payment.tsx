@@ -1,9 +1,13 @@
 import React, { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -19,12 +23,19 @@ import { theme } from "@/components/theme";
 export default function PaymentScreen() {
   const [method, setMethod] = useState<"mobile-money" | "card">("mobile-money");
   const [enabled, setEnabled] = useState(false);
+  const [amount, setAmount] = useState("25000");
+  const [status, setStatus] = useState<"idle" | "processing" | "paid">("idle");
   const save = () => {
     setEnabled(true);
     Alert.alert(
       "Payment method saved",
       "Payments are held in CamWork until both parties confirm the transaction.",
     );
+  };
+  const simulatePayment = () => {
+    if (!amount.trim()) return;
+    setStatus("processing");
+    setTimeout(() => setStatus("paid"), 900);
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -35,7 +46,11 @@ export default function PaymentScreen() {
         <Text style={styles.headerTitle}>Payments</Text>
         <View style={styles.spacer} />
       </View>
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.trust}>
           <ShieldCheck size={22} color={theme.colors.primary} />
           <View style={styles.flex}>
@@ -82,7 +97,27 @@ export default function PaymentScreen() {
             {enabled ? "Payment method saved" : "Save payment method"}
           </Text>
         </TouchableOpacity>
-      </View>
+        <Text style={styles.sectionTitle}>Transaction simulation</Text>
+        <TextInput
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="numeric"
+          placeholder="Amount in FCFA"
+          placeholderTextColor="#94a3b8"
+          style={styles.amountInput}
+        />
+        <TouchableOpacity
+          style={[styles.button, status === "paid" && styles.paidButton]}
+          onPress={simulatePayment}
+          disabled={status === "processing"}
+        >
+          <Text style={styles.buttonText}>
+            {status === "processing" ? "Processing..." : status === "paid" ? "Payment simulated" : "Simulate payment"}
+          </Text>
+        </TouchableOpacity>
+        {status === "paid" && <Text style={styles.successText}>Funds held safely until the transaction is confirmed.</Text>}
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -113,7 +148,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   spacer: { width: 40 },
-  content: { padding: 18, gap: 12 },
+  content: { padding: 18, gap: 12, paddingBottom: 32 },
   trust: {
     flexDirection: "row",
     gap: 10,
@@ -154,4 +189,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   buttonText: { color: "#fff", fontWeight: "800" },
+  amountInput: {
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#dbe3ed",
+    backgroundColor: "#fff",
+    paddingHorizontal: 14,
+    color: theme.colors.text,
+  },
+  paidButton: { backgroundColor: theme.colors.success },
+  successText: { color: theme.colors.success, fontSize: 12, fontWeight: "700" },
 });

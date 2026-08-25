@@ -50,30 +50,42 @@ const RegisterScreen = () => {
 
   const validateName = (value: string) => {
     if (!value.trim()) {
-      return language === "EN" ? "Full name is required." : "Le nom complet est requis.";
+      return language === "EN"
+        ? "Full name is required."
+        : "Le nom complet est requis.";
     }
     if (value.trim().length < 2) {
-      return language === "EN" ? "Please enter at least 2 characters." : "Entrez au moins 2 caractères.";
+      return language === "EN"
+        ? "Please enter at least 2 characters."
+        : "Entrez au moins 2 caractères.";
     }
     return undefined;
   };
 
   const validateEmail = (value: string) => {
     if (!value.trim()) {
-      return language === "EN" ? "Email address is required." : "L'adresse e-mail est requise.";
+      return language === "EN"
+        ? "Email address is required."
+        : "L'adresse e-mail est requise.";
     }
     if (!/^\S+@\S+\.\S+$/.test(value.trim())) {
-      return language === "EN" ? "Please enter a valid email address." : "Entrez une adresse e-mail valide.";
+      return language === "EN"
+        ? "Please enter a valid email address."
+        : "Entrez une adresse e-mail valide.";
     }
     return undefined;
   };
 
   const validatePassword = (value: string) => {
     if (!value) {
-      return language === "EN" ? "Password is required." : "Le mot de passe est requis.";
+      return language === "EN"
+        ? "Password is required."
+        : "Le mot de passe est requis.";
     }
     if (value.length < 6) {
-      return language === "EN" ? "Password must be at least 6 characters." : "Le mot de passe doit comporter au moins 6 caractères.";
+      return language === "EN"
+        ? "Password must be at least 6 characters."
+        : "Le mot de passe doit comporter au moins 6 caractères.";
     }
     return undefined;
   };
@@ -121,7 +133,7 @@ const RegisterScreen = () => {
       setSuccessMessage(
         language === "EN"
           ? "Account created successfully! Preparing your experience..."
-          : "Compte créé avec succès ! Préparation de votre espace..."
+          : "Compte créé avec succès ! Préparation de votre espace...",
       );
 
       setTimeout(() => {
@@ -133,7 +145,8 @@ const RegisterScreen = () => {
       }, 500);
     } catch (error) {
       console.error("Registration error:", error);
-      const rawMsg = error instanceof Error ? error.message : "Registration failed.";
+      const rawMsg =
+        error instanceof Error ? error.message : "Registration failed.";
 
       let localizedMsg = rawMsg;
       if (rawMsg.toLowerCase().includes("already exists")) {
@@ -162,14 +175,19 @@ const RegisterScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["top", "left", "right", "bottom"]}
+    >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
         style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Top Bar */}
@@ -185,18 +203,34 @@ const RegisterScreen = () => {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setLanguage("EN")}
-                style={[styles.langBtn, language === "EN" && styles.activeLangBtn]}
+                style={[
+                  styles.langBtn,
+                  language === "EN" && styles.activeLangBtn,
+                ]}
               >
-                <Text style={[styles.langText, language === "EN" && styles.activeLangText]}>
+                <Text
+                  style={[
+                    styles.langText,
+                    language === "EN" && styles.activeLangText,
+                  ]}
+                >
                   EN
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setLanguage("FR")}
-                style={[styles.langBtn, language === "FR" && styles.activeLangBtn]}
+                style={[
+                  styles.langBtn,
+                  language === "FR" && styles.activeLangBtn,
+                ]}
               >
-                <Text style={[styles.langText, language === "FR" && styles.activeLangText]}>
+                <Text
+                  style={[
+                    styles.langText,
+                    language === "FR" && styles.activeLangText,
+                  ]}
+                >
                   FR
                 </Text>
               </TouchableOpacity>
@@ -208,7 +242,9 @@ const RegisterScreen = () => {
             <View style={styles.pillBadge}>
               <Sparkles size={13} color={theme.colors.primary} />
               <Text style={styles.pillBadgeText}>
-                {language === "EN" ? "Quick & Free Registration" : "Inscription Rapide et Gratuite"}
+                {language === "EN"
+                  ? "Quick & Free Registration"
+                  : "Inscription Rapide et Gratuite"}
               </Text>
             </View>
             <Text style={styles.title}>{t.auth.registerTitle}</Text>
@@ -229,7 +265,11 @@ const RegisterScreen = () => {
 
           {successMessage && (
             <View style={styles.alertBoxSuccess}>
-              <CheckCircle2 size={18} color="#15803d" style={styles.alertIcon} />
+              <CheckCircle2
+                size={18}
+                color="#15803d"
+                style={styles.alertIcon}
+              />
               <Text style={styles.alertTextSuccess}>{successMessage}</Text>
             </View>
           )}
@@ -291,7 +331,9 @@ const RegisterScreen = () => {
                 >
                   <Building2
                     size={20}
-                    color={role === "employer" ? "#ffffff" : theme.colors.primary}
+                    color={
+                      role === "employer" ? "#ffffff" : theme.colors.primary
+                    }
                   />
                 </View>
                 <Text
@@ -332,13 +374,18 @@ const RegisterScreen = () => {
                   value={name}
                   onChangeText={(val) => {
                     setName(val);
-                    if (errors.name) setErrors({ ...errors, name: validateName(val) });
+                    if (errors.name)
+                      setErrors({ ...errors, name: validateName(val) });
                     if (serverError) setServerError(null);
                   }}
-                  onBlur={() => setErrors({ ...errors, name: validateName(name) })}
+                  onBlur={() =>
+                    setErrors({ ...errors, name: validateName(name) })
+                  }
                 />
               </View>
-              {errors.name && <Text style={styles.errorCaption}>{errors.name}</Text>}
+              {errors.name && (
+                <Text style={styles.errorCaption}>{errors.name}</Text>
+              )}
             </View>
 
             {/* Email */}
@@ -361,13 +408,18 @@ const RegisterScreen = () => {
                   value={email}
                   onChangeText={(val) => {
                     setEmail(val);
-                    if (errors.email) setErrors({ ...errors, email: validateEmail(val) });
+                    if (errors.email)
+                      setErrors({ ...errors, email: validateEmail(val) });
                     if (serverError) setServerError(null);
                   }}
-                  onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
+                  onBlur={() =>
+                    setErrors({ ...errors, email: validateEmail(email) })
+                  }
                 />
               </View>
-              {errors.email && <Text style={styles.errorCaption}>{errors.email}</Text>}
+              {errors.email && (
+                <Text style={styles.errorCaption}>{errors.email}</Text>
+              )}
             </View>
 
             {/* Password */}
@@ -388,10 +440,16 @@ const RegisterScreen = () => {
                   value={password}
                   onChangeText={(val) => {
                     setPassword(val);
-                    if (errors.password) setErrors({ ...errors, password: validatePassword(val) });
+                    if (errors.password)
+                      setErrors({ ...errors, password: validatePassword(val) });
                     if (serverError) setServerError(null);
                   }}
-                  onBlur={() => setErrors({ ...errors, password: validatePassword(password) })}
+                  onBlur={() =>
+                    setErrors({
+                      ...errors,
+                      password: validatePassword(password),
+                    })
+                  }
                 />
                 <TouchableOpacity
                   activeOpacity={0.7}
@@ -406,13 +464,19 @@ const RegisterScreen = () => {
                   )}
                 </TouchableOpacity>
               </View>
-              {errors.password && <Text style={styles.errorCaption}>{errors.password}</Text>}
+              {errors.password && (
+                <Text style={styles.errorCaption}>{errors.password}</Text>
+              )}
             </View>
           </View>
 
           {/* Trust & Terms banner */}
           <View style={styles.termsBox}>
-            <ShieldCheck size={18} color={theme.colors.primary} style={styles.shieldIcon} />
+            <ShieldCheck
+              size={18}
+              color={theme.colors.primary}
+              style={styles.shieldIcon}
+            />
             <Text style={styles.termsText}>{t.auth.terms}</Text>
           </View>
 
@@ -428,7 +492,9 @@ const RegisterScreen = () => {
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
                 <>
-                  <Text style={styles.primaryBtnText}>{t.auth.createAccountBtn}</Text>
+                  <Text style={styles.primaryBtnText}>
+                    {t.auth.createAccountBtn}
+                  </Text>
                   <ArrowRight size={19} color="#ffffff" strokeWidth={2.4} />
                 </>
               )}
@@ -757,4 +823,3 @@ const styles = StyleSheet.create({
 });
 
 export default RegisterScreen;
-

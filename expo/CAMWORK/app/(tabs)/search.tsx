@@ -220,6 +220,7 @@ export default function SearchScreen() {
 
         {/* Job Results List */}
         <FlatList
+          style={styles.resultsList}
           data={filteredJobs}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    height: 46,
+    height: 42,
     paddingHorizontal: 13,
     gap: 8,
     borderWidth: 1.5,
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
   },
   filterBtn: {
     width: 46,
-    height: 46,
+    height: 42,
     borderRadius: 14,
     backgroundColor: "#ffffff",
     alignItems: "center",
@@ -542,7 +543,7 @@ const styles = StyleSheet.create({
   quickPill: {
     backgroundColor: "#ffffff",
     paddingHorizontal: 11,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -582,6 +583,10 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 24,
   },
+  resultsList: {
+    flex: 1,
+    minWidth: 0,
+  },
   jobCard: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -615,6 +620,7 @@ const styles = StyleSheet.create({
   },
   jobHeaderInfo: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   titleRow: {
@@ -626,6 +632,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: theme.colors.text,
+    flexShrink: 1,
   },
   jobCompany: {
     fontSize: 13,
@@ -651,6 +658,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
   },
   metaItem: {
     flexDirection: "row",
@@ -660,6 +668,7 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 12,
     color: "#64748b",
+    flexShrink: 1,
   },
   typeBadge: {
     paddingHorizontal: 8,
@@ -682,6 +691,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: theme.colors.text,
+    flexShrink: 1,
   },
   matchScoreBadge: {
     flexDirection: "row",
@@ -691,11 +701,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
+    flexShrink: 1,
   },
   matchScoreText: {
     fontSize: 11,
     fontWeight: "800",
     color: theme.colors.primary,
+    flexShrink: 1,
+    textAlign: "center",
   },
   emptyContainer: {
     alignItems: "center",
@@ -720,11 +733,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     marginTop: 8,
+    minHeight: 42,
+    justifyContent: "center",
   },
   resetBtnText: {
     fontSize: 13,
     fontWeight: "700",
     color: theme.colors.primary,
+    flexShrink: 1,
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,
@@ -789,10 +806,11 @@ const styles = StyleSheet.create({
   modalFooter: {
     flexDirection: "row",
     gap: 12,
+    flexWrap: "wrap",
   },
   modalClearBtn: {
     flex: 1,
-    height: 52,
+    minHeight: 52,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -803,10 +821,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: theme.colors.text,
+    flexShrink: 1,
+    textAlign: "center",
   },
   modalApplyBtn: {
     flex: 2,
-    height: 52,
+    minHeight: 52,
     backgroundColor: theme.colors.primary,
     borderRadius: 16,
     alignItems: "center",
@@ -816,5 +836,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#ffffff",
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

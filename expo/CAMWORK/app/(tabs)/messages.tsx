@@ -67,6 +67,7 @@ export default function MessagesScreen() {
 
         {/* Conversation List */}
         <FlatList
+          style={styles.messagesList}
           data={filteredConversations}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
@@ -184,6 +185,10 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 24,
   },
+  messagesList: {
+    flex: 1,
+    minWidth: 0,
+  },
   conversationCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -234,6 +239,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
   },
   companyName: {
     fontSize: 15,
@@ -244,6 +250,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 11,
     color: "#94a3b8",
+    flexShrink: 1,
   },
   jobContextBadge: {
     backgroundColor: "#f8fafc",
@@ -256,6 +263,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.primary,
     fontWeight: "700",
+    flexShrink: 1,
   },
   lastMessage: {
     fontSize: 13,

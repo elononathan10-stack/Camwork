@@ -22,7 +22,6 @@ import {
   Users,
   Gift,
   Settings,
-  LogOut,
   ChevronRight,
   Sparkles,
   Plus,
@@ -33,13 +32,8 @@ import { useUser } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function ProfileScreen() {
-  const { user, skills, workHistory, reviews, logout } = useUser();
+  const { user, skills, workHistory, reviews } = useUser();
   const { language, t } = useLanguage();
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/");
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -318,22 +312,6 @@ export default function ProfileScreen() {
             <Text style={styles.menuTitle}>{t.profile.settingsSection}</Text>
             <ChevronRight size={18} color="#94a3b8" />
           </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.menuRow} onPress={handleLogout}>
-            <View
-              style={[
-                styles.menuIconCircle,
-                { backgroundColor: theme.colors.errorLight },
-              ]}
-            >
-              <LogOut size={18} color={theme.colors.error} />
-            </View>
-            <Text style={[styles.menuTitle, { color: theme.colors.error }]}>
-              {t.profile.logout}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <View style={{ height: 32 }} />
@@ -454,11 +432,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     marginTop: 6,
+    minHeight: 40,
+    justifyContent: "center",
   },
   editProfileBtnText: {
     fontSize: 13,
     fontWeight: "800",
     color: theme.colors.primary,
+    flexShrink: 1,
+    textAlign: "center",
   },
   completenessBox: {
     backgroundColor: "#f8fafc",
@@ -537,9 +519,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
   sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 16,
@@ -547,6 +527,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   editSkillsBtn: {
+    alignSelf: "flex-start",
     backgroundColor: theme.colors.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -589,6 +570,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   addHistoryLink: {
+    alignSelf: "flex-start",
     fontSize: 13,
     fontWeight: "700",
     color: theme.colors.primary,
@@ -627,11 +609,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   timelineJobTitle: {
     fontSize: 14,
     fontWeight: "800",
     color: theme.colors.text,
+    flex: 1,
   },
   verifiedChip: {
     flexDirection: "row",

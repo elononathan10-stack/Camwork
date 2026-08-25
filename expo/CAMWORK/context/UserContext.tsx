@@ -169,6 +169,8 @@ export interface SeekerProfile {
   isProfileComplete: boolean;
   idDocumentUploaded: boolean;
   certificateUploaded: boolean;
+  idDocumentUri?: string;
+  certificateDocumentUri?: string;
 }
 
 interface UserContextType {
@@ -203,7 +205,10 @@ interface UserContextType {
   markNotificationRead: (notifId: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   sendChatMessage: (conversationId: string, text: string) => Promise<void>;
-  uploadVerificationDocument: (docType: "id" | "certificate") => Promise<void>;
+  uploadVerificationDocument: (
+    docType: "id" | "certificate",
+    documentUri: string,
+  ) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -760,6 +765,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     loadState();
   }, []);
 
+  useEffect(() => {
+    if (!isLoading && user?.email) {
+      saveAccountSnapshot(user.email).catch((error) =>
+        console.error("Error saving account messages:", error),
+      );
+    }
+  }, [conversations, isLoading, user?.email]);
+
   const setUser = async (userData: Partial<SeekerProfile>) => {
     const updated = {
       ...(user || INITIAL_PROFILE),
@@ -997,15 +1010,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     return conversationId;
   };
 
-  const uploadVerificationDocument = async (docType: "id" | "certificate") => {
+  const uploadVerificationDocument = async (
+    docType: "id" | "certificate",
+    documentUri: string,
+  ) => {
     if (docType === "id") {
       await updateProfile({
         idDocumentUploaded: true,
+        idDocumentUri: documentUri,
         isVerified: false,
         verificationStatus: "In Review",
       });
     } else {
-      await updateProfile({ certificateUploaded: true });
+      await updateProfile({
+        certificateUploaded: true,
+        certificateDocumentUri: documentUri,
+      });
     }
   };
 

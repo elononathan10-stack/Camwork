@@ -24,6 +24,8 @@ import {
 import { theme } from "@/components/theme";
 import { useUser } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 
 export default function VerificationScreen() {
   const { user, uploadVerificationDocument } = useUser();
@@ -31,16 +33,67 @@ export default function VerificationScreen() {
 
   const [isUploading, setIsUploading] = useState<string | null>(null);
 
-  const handleUpload = async (type: "id" | "certificate") => {
+  const handleUpload = async (
+    type: "id" | "certificate",
+    documentUri: string,
+  ) => {
     setIsUploading(type);
     await new Promise((r) => setTimeout(r, 600));
-    await uploadVerificationDocument(type);
+    await uploadVerificationDocument(type, documentUri);
     setIsUploading(null);
     Alert.alert(
       language === "EN" ? "Document Uploaded" : "Document Téléversé",
       language === "EN"
         ? "Your document has been submitted for validation."
         : "Votre document a été soumis pour validation.",
+    );
+  };
+
+  const chooseUploadSource = (type: "id" | "certificate") => {
+    Alert.alert(
+      language === "EN" ? "Add document" : "Ajouter un document",
+      language === "EN"
+        ? "Take a photo or select a file."
+        : "Prenez une photo ou sélectionnez un fichier.",
+      [
+        {
+          text: language === "EN" ? "Camera" : "Appareil photo",
+          onPress: async () => {
+            const permission =
+              await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) return;
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ["images"],
+              quality: 0.85,
+            });
+            if (!result.canceled)
+              await handleUpload(type, result.assets[0].uri);
+          },
+        },
+        {
+          text: language === "EN" ? "Photo library" : "Galerie photo",
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ["images"],
+              quality: 0.85,
+            });
+            if (!result.canceled)
+              await handleUpload(type, result.assets[0].uri);
+          },
+        },
+        {
+          text: "PDF",
+          onPress: async () => {
+            const result = await DocumentPicker.getDocumentAsync({
+              type: "application/pdf",
+              copyToCacheDirectory: true,
+            });
+            if (!result.canceled)
+              await handleUpload(type, result.assets[0].uri);
+          },
+        },
+        { text: t.common.cancel, style: "cancel" },
+      ],
     );
   };
 
@@ -120,10 +173,34 @@ export default function VerificationScreen() {
           <View style={styles.uploadPreview}>
             <Text style={styles.uploadPreviewText}>
               {user?.idDocumentUploaded
-                ? "Identity document submitted for review."
+                ? `${language === "EN" ? "Identity document captured" : "Document d'identité capturé"}.`
                 : "No identity document submitted yet."}
             </Text>
+            {user?.idDocumentUri && (
+              <Text style={styles.uploadFileText} numberOfLines={1}>
+                {user.idDocumentUri.split("/").pop()}
+              </Text>
+            )}
           </View>
+          <TouchableOpacity
+            style={styles.uploadActionBtn}
+            onPress={() => chooseUploadSource("id")}
+            disabled={isUploading === "id"}
+          >
+            <UploadCloud size={18} color={theme.colors.primary} />
+            <Text style={styles.uploadActionText}>
+              {isUploading === "id"
+                ? language === "EN"
+                  ? "Uploading..."
+                  : "Téléversement..."
+                : `${t.verification.uploadDocument} (PDF / JPG)`}
+            </Text>
+          </TouchableOpacity>
+          {user?.certificateDocumentUri && (
+            <Text style={styles.uploadFileText} numberOfLines={1}>
+              {user.certificateDocumentUri.split("/").pop()}
+            </Text>
+          )}
         </View>
 
         {/* Item 2: Trade / Professional Certificate */}
@@ -172,7 +249,7 @@ export default function VerificationScreen() {
 
           <TouchableOpacity
             style={styles.uploadActionBtn}
-            onPress={() => handleUpload("certificate")}
+            onPress={() => chooseUploadSource("certificate")}
           >
             <UploadCloud size={18} color={theme.colors.primary} />
             <Text style={styles.uploadActionText}>
@@ -200,7 +277,7 @@ export default function VerificationScreen() {
 
           <TouchableOpacity
             style={styles.uploadActionBtn}
-            onPress={() => handleUpload("certificate")}
+            onPress={() => chooseUploadSource("certificate")}
           >
             <UploadCloud size={18} color={theme.colors.primary} />
             <Text style={styles.uploadActionText}>
@@ -319,6 +396,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: theme.colors.success,
+  },
+  uploadFileText: {
+    marginTop: 4,
+    fontSize: 11,
+    color: "#64748b",
   },
   uploadActionBtn: {
     flexDirection: "row",

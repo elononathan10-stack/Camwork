@@ -136,9 +136,10 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: theme.colors.primary,
-    fontSize: 12,
+    fontSize: 19,
     fontWeight: "800",
     textTransform: "uppercase",
+    marginTop:25,
   },
   title: {
     color: theme.colors.text,
@@ -157,17 +158,17 @@ const styles = StyleSheet.create({
   },
   actions: { gap: 10, paddingBottom: 24 },
   action: {
-    minHeight: 42,
+    minHeight: 34,
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    paddingHorizontal: 12,
+    paddingHorizontal: 11,
     borderRadius: 12,
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#dbe3ed",
   },
-  actionText: { color: theme.colors.text, fontSize: 12, fontWeight: "800" },
+  actionText: { color: theme.colors.text, fontSize: 12, fontWeight: "800", flexShrink: 1 },
   sectionTitle: {
     color: theme.colors.text,
     fontSize: 18,

@@ -36,21 +36,29 @@ const LoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {},
+  );
 
   const validateEmail = (value: string) => {
     if (!value.trim()) {
-      return language === "EN" ? "Email address is required." : "L'adresse e-mail est requise.";
+      return language === "EN"
+        ? "Email address is required."
+        : "L'adresse e-mail est requise.";
     }
     if (!/^\S+@\S+\.\S+$/.test(value.trim())) {
-      return language === "EN" ? "Please enter a valid email address." : "Entrez une adresse e-mail valide.";
+      return language === "EN"
+        ? "Please enter a valid email address."
+        : "Entrez une adresse e-mail valide.";
     }
     return undefined;
   };
 
   const validatePassword = (value: string) => {
     if (!value) {
-      return language === "EN" ? "Password is required." : "Le mot de passe est requis.";
+      return language === "EN"
+        ? "Password is required."
+        : "Le mot de passe est requis.";
     }
     return undefined;
   };
@@ -90,7 +98,7 @@ const LoginScreen = () => {
       setSuccessMessage(
         language === "EN"
           ? "Login successful! Welcome back to CamWork."
-          : "Connexion réussie ! Ravi de vous revoir sur CamWork."
+          : "Connexion réussie ! Ravi de vous revoir sur CamWork.",
       );
 
       setTimeout(() => {
@@ -99,14 +107,26 @@ const LoginScreen = () => {
     } catch (error) {
       console.error("Login error:", error);
       const rawMsg = error instanceof Error ? error.message : "Login failed.";
-      
+
       let localizedMsg = rawMsg;
-      if (rawMsg.toLowerCase().includes("invalid password") || rawMsg.toLowerCase().includes("invalid credentials")) {
-        localizedMsg = language === "EN" ? "Incorrect password. Please try again." : "Mot de passe incorrect. Veuillez réessayer.";
+      if (
+        rawMsg.toLowerCase().includes("invalid password") ||
+        rawMsg.toLowerCase().includes("invalid credentials")
+      ) {
+        localizedMsg =
+          language === "EN"
+            ? "Incorrect password. Please try again."
+            : "Mot de passe incorrect. Veuillez réessayer.";
       } else if (rawMsg.toLowerCase().includes("not found")) {
-        localizedMsg = language === "EN" ? "No account found with this email." : "Aucun compte trouvé avec cette adresse e-mail.";
+        localizedMsg =
+          language === "EN"
+            ? "No account found with this email."
+            : "Aucun compte trouvé avec cette adresse e-mail.";
       } else if (rawMsg.toLowerCase().includes("unable to reach backend")) {
-        localizedMsg = language === "EN" ? "Unable to connect to backend server. Please verify network." : "Impossible de joindre le serveur. Vérifiez la connexion.";
+        localizedMsg =
+          language === "EN"
+            ? "Unable to connect to backend server. Please verify network."
+            : "Impossible de joindre le serveur. Vérifiez la connexion.";
       }
 
       setServerError(localizedMsg);
@@ -116,14 +136,19 @@ const LoginScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["top", "left", "right", "bottom"]}
+    >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
         style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Top Bar: Brand & Language Selector */}
@@ -139,18 +164,34 @@ const LoginScreen = () => {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setLanguage("EN")}
-                style={[styles.langBtn, language === "EN" && styles.activeLangBtn]}
+                style={[
+                  styles.langBtn,
+                  language === "EN" && styles.activeLangBtn,
+                ]}
               >
-                <Text style={[styles.langText, language === "EN" && styles.activeLangText]}>
+                <Text
+                  style={[
+                    styles.langText,
+                    language === "EN" && styles.activeLangText,
+                  ]}
+                >
                   EN
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setLanguage("FR")}
-                style={[styles.langBtn, language === "FR" && styles.activeLangBtn]}
+                style={[
+                  styles.langBtn,
+                  language === "FR" && styles.activeLangBtn,
+                ]}
               >
-                <Text style={[styles.langText, language === "FR" && styles.activeLangText]}>
+                <Text
+                  style={[
+                    styles.langText,
+                    language === "FR" && styles.activeLangText,
+                  ]}
+                >
                   FR
                 </Text>
               </TouchableOpacity>
@@ -162,7 +203,9 @@ const LoginScreen = () => {
             <View style={styles.pillBadge}>
               <Sparkles size={13} color={theme.colors.primary} />
               <Text style={styles.pillBadgeText}>
-                {language === "EN" ? "Verified Career Network" : "Réseau Professionnel Vérifié"}
+                {language === "EN"
+                  ? "Verified Career Network"
+                  : "Réseau Professionnel Vérifié"}
               </Text>
             </View>
             <Text style={styles.welcomeTitle}>{t.auth.loginTitle}</Text>
@@ -179,7 +222,11 @@ const LoginScreen = () => {
 
           {successMessage && (
             <View style={styles.alertBoxSuccess}>
-              <CheckCircle2 size={18} color="#15803d" style={styles.alertIcon} />
+              <CheckCircle2
+                size={18}
+                color="#15803d"
+                style={styles.alertIcon}
+              />
               <Text style={styles.alertTextSuccess}>{successMessage}</Text>
             </View>
           )}
@@ -206,13 +253,18 @@ const LoginScreen = () => {
                   value={email}
                   onChangeText={(val) => {
                     setEmail(val);
-                    if (errors.email) setErrors({ ...errors, email: validateEmail(val) });
+                    if (errors.email)
+                      setErrors({ ...errors, email: validateEmail(val) });
                     if (serverError) setServerError(null);
                   }}
-                  onBlur={() => setErrors({ ...errors, email: validateEmail(email) })}
+                  onBlur={() =>
+                    setErrors({ ...errors, email: validateEmail(email) })
+                  }
                 />
               </View>
-              {errors.email && <Text style={styles.errorCaption}>{errors.email}</Text>}
+              {errors.email && (
+                <Text style={styles.errorCaption}>{errors.email}</Text>
+              )}
             </View>
 
             {/* Password Field */}
@@ -243,10 +295,16 @@ const LoginScreen = () => {
                   value={password}
                   onChangeText={(val) => {
                     setPassword(val);
-                    if (errors.password) setErrors({ ...errors, password: validatePassword(val) });
+                    if (errors.password)
+                      setErrors({ ...errors, password: validatePassword(val) });
                     if (serverError) setServerError(null);
                   }}
-                  onBlur={() => setErrors({ ...errors, password: validatePassword(password) })}
+                  onBlur={() =>
+                    setErrors({
+                      ...errors,
+                      password: validatePassword(password),
+                    })
+                  }
                 />
                 <TouchableOpacity
                   activeOpacity={0.7}
@@ -261,7 +319,9 @@ const LoginScreen = () => {
                   )}
                 </TouchableOpacity>
               </View>
-              {errors.password && <Text style={styles.errorCaption}>{errors.password}</Text>}
+              {errors.password && (
+                <Text style={styles.errorCaption}>{errors.password}</Text>
+              )}
             </View>
           </View>
 
@@ -313,7 +373,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 28,
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
   },
   topBar: {
     flexDirection: "row",
@@ -533,4 +593,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
-
