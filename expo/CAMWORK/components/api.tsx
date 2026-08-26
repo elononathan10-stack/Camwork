@@ -62,10 +62,10 @@ const handleApiResponse = async (response: Response) => {
       (response.status === 401
         ? "Invalid email or password."
         : response.status === 404
-        ? "Account not found with this email."
-        : response.status === 409
-        ? "An account already exists with this email."
-        : `Server error (${response.status})`);
+          ? "Account not found with this email."
+          : response.status === 409
+            ? "An account already exists with this email."
+            : `Server error (${response.status})`);
     throw new Error(message);
   }
 
@@ -95,9 +95,12 @@ export const loginUser = async (credentials: {
     }
     return result;
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes("Network request failed")) {
+    if (
+      error instanceof TypeError &&
+      error.message.includes("Network request failed")
+    ) {
       throw new Error(
-        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`
+        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`,
       );
     }
     throw error;
@@ -128,9 +131,12 @@ export const registerUser = async (payload: {
     const result = (await handleApiResponse(response)) as RegisterResponse;
     return result;
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes("Network request failed")) {
+    if (
+      error instanceof TypeError &&
+      error.message.includes("Network request failed")
+    ) {
       throw new Error(
-        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`
+        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`,
       );
     }
     throw error;
@@ -150,9 +156,12 @@ export const requestPasswordReset = async (email: string) => {
 
     return handleApiResponse(response);
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes("Network request failed")) {
+    if (
+      error instanceof TypeError &&
+      error.message.includes("Network request failed")
+    ) {
       throw new Error(
-        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`
+        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`,
       );
     }
     throw error;
@@ -172,12 +181,28 @@ export const resetPassword = async (token: string, password: string) => {
 
     return handleApiResponse(response);
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes("Network request failed")) {
+    if (
+      error instanceof TypeError &&
+      error.message.includes("Network request failed")
+    ) {
       throw new Error(
-        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`
+        `Unable to reach backend server at ${baseUrl}. Ensure backend is running.`,
       );
     }
     throw error;
   }
 };
 
+export const createPayment = async (payload: {
+  payerEmail: string;
+  amount: string;
+  method: "mobile-money" | "card";
+}) => {
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/payments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleApiResponse(response);
+};

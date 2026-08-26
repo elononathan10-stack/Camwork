@@ -22,10 +22,12 @@ import {
 import { theme } from "@/components/theme";
 import { useUser } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function MessagesScreen() {
   const { conversations } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredConversations = conversations.filter(
@@ -39,7 +41,6 @@ export default function MessagesScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>
             {t.messages.title}
@@ -53,9 +54,8 @@ export default function MessagesScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Search */}
         <View style={styles.searchBar}>
-          <Search size={18} color="#94a3b8" />
+          <Search size={18} color="#8d8b8bff" />
           <TextInput
             placeholder={t.messages.searchPlaceholder}
             style={styles.searchInput}
@@ -65,13 +65,15 @@ export default function MessagesScreen() {
           />
         </View>
 
-        {/* Conversation List */}
         <FlatList
           style={styles.messagesList}
           data={filteredConversations}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: 24 + insets.bottom },
+          ]}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.conversationCard}

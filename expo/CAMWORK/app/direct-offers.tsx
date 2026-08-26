@@ -25,10 +25,12 @@ import {
 import { theme } from "@/components/theme";
 import { useUser, DirectOfferItem } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function DirectOffersScreen() {
   const { directOffers, acceptOffer, declineOffer } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const handleAccept = (offer: DirectOfferItem) => {
     acceptOffer(offer.id);
@@ -36,7 +38,7 @@ export default function DirectOffersScreen() {
       language === "EN" ? "Offer Accepted!" : "Offre Acceptée !",
       language === "EN"
         ? `You have accepted the direct offer from ${offer.companyName}. The recruiter has been notified.`
-        : `Vous avez accepté l'offre directe de ${offer.companyName}. Le recruteur a été informé.`
+        : `Vous avez accepté l'offre directe de ${offer.companyName}. Le recruteur a été informé.`,
     );
   };
 
@@ -63,7 +65,10 @@ export default function DirectOffersScreen() {
       <FlatList
         data={directOffers}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 24 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           /* Explanatory Two-Way Match Banner */
@@ -72,7 +77,9 @@ export default function DirectOffersScreen() {
               <Gift size={24} color={theme.colors.accentDark} />
             </View>
             <View style={styles.bannerTextWrap}>
-              <Text style={styles.bannerTitle}>{t.directOffers.bannerTitle}</Text>
+              <Text style={styles.bannerTitle}>
+                {t.directOffers.bannerTitle}
+              </Text>
               <Text style={styles.bannerSub}>{t.directOffers.bannerSub}</Text>
             </View>
           </View>
@@ -102,7 +109,9 @@ export default function DirectOffersScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    isAccepted && { backgroundColor: theme.colors.successLight },
+                    isAccepted && {
+                      backgroundColor: theme.colors.successLight,
+                    },
                     isDeclined && { backgroundColor: theme.colors.errorLight },
                     isPending && { backgroundColor: theme.colors.accentLight },
                   ]}
@@ -139,7 +148,9 @@ export default function DirectOffersScreen() {
 
                 {/* Recruiter Message */}
                 <View style={styles.messageBox}>
-                  <Text style={styles.messageText}>"{item.message}"</Text>
+                  <Text style={styles.messageText}>
+                    &quot;{item.message}&quot;
+                  </Text>
                 </View>
               </View>
 
@@ -186,8 +197,8 @@ export default function DirectOffersScreen() {
                         ? "Offer accepted. The recruiter will contact you soon."
                         : "Offre acceptée. Le recruteur vous contactera sous peu."
                       : language === "EN"
-                      ? "Offer declined."
-                      : "Offre refusée."}
+                        ? "Offer declined."
+                        : "Offre refusée."}
                   </Text>
                   <TouchableOpacity
                     style={styles.chatBtn}

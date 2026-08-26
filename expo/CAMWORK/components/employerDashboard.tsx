@@ -12,15 +12,22 @@ import {
   CreditCard,
   Plus,
   UserRound,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react-native";
 import { router } from "expo-router";
 import { theme } from "./theme";
 import { useUser } from "@/context/UserContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EmployerDashboard() {
-  const { user, jobs } = useUser();
+  const { user, jobs, applications, updateApplicationStatus } = useUser();
+  const insets = useSafeAreaInsets();
   const ownJobs = jobs.filter(
     (job) => job.postedBy === user?.email && !job.isServiceRequest,
+  );
+  const employerApplications = applications.filter((application) =>
+    ownJobs.some((job) => job.id === application.jobId),
   );
   const actions = [
     {
@@ -48,7 +55,10 @@ export default function EmployerDashboard() {
       <FlatList
         data={ownJobs}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 36 + insets.bottom },
+        ]}
         ListHeaderComponent={
           <>
             <View style={styles.header}>
@@ -86,6 +96,53 @@ export default function EmployerDashboard() {
               }}
             />
             <Text style={styles.sectionTitle}>Your job offers</Text>
+            {employerApplications.length > 0 && (
+              <View>
+                <Text style={styles.sectionTitle}>Applicant review</Text>
+                {employerApplications.map((application) => (
+                  <View key={application.id} style={styles.applicationCard}>
+                    <View style={styles.applicationBody}>
+                      <Text style={styles.jobTitle}>
+                        {application.jobTitle}
+                      </Text>
+                      <Text style={styles.jobMeta}>
+                        {application.companyName} · {application.status}
+                      </Text>
+                      {!!application.coverNote && (
+                        <Text style={styles.jobDescription} numberOfLines={2}>
+                          {application.coverNote}
+                        </Text>
+                      )}
+                    </View>
+                    {application.status === "Pending" && (
+                      <View style={styles.applicationActions}>
+                        <TouchableOpacity
+                          style={styles.reviewButton}
+                          onPress={() =>
+                            updateApplicationStatus(application.id, "Rejected")
+                          }
+                          accessibilityLabel="Refuse application"
+                        >
+                          <XCircle size={20} color={theme.colors.error} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.reviewButton}
+                          onPress={() =>
+                            updateApplicationStatus(application.id, "Accepted")
+                          }
+                          accessibilityLabel="Validate application"
+                        >
+                          <CheckCircle2
+                            size={20}
+                            color={theme.colors.success}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         }
         renderItem={({ item }) => (
@@ -139,7 +196,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "800",
     textTransform: "uppercase",
-    marginTop:25,
+    marginTop: 25,
   },
   title: {
     color: theme.colors.text,
@@ -168,7 +225,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dbe3ed",
   },
-  actionText: { color: theme.colors.text, fontSize: 12, fontWeight: "800", flexShrink: 1 },
+  actionText: {
+    color: theme.colors.text,
+    fontSize: 12,
+    fontWeight: "800",
+    flexShrink: 1,
+  },
   sectionTitle: {
     color: theme.colors.text,
     fontSize: 18,
@@ -184,6 +246,27 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+  },
+  applicationCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  applicationBody: { flex: 1 },
+  applicationActions: { flexDirection: "row", gap: 8 },
+  reviewButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "#f8fafc",
   },
   jobIcon: {
     width: 42,

@@ -8,7 +8,13 @@ import {
   StatusBar,
 } from "react-native";
 import { router } from "expo-router";
-import { Check, Globe2, Sparkles, ArrowRight, ShieldCheck } from "lucide-react-native";
+import {
+  Check,
+  Globe2,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+} from "lucide-react-native";
 import { theme } from "@/components/theme";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -31,7 +37,9 @@ export default function LanguageSelectScreen() {
           <Text style={styles.brandTitle}>CamWork</Text>
           <View style={styles.taglineBadge}>
             <ShieldCheck size={14} color={theme.colors.primary} />
-            <Text style={styles.taglineText}>Cameroon's Verified Work Platform</Text>
+            <Text style={styles.taglineText}>
+              Cameroon&apos;s Verified Work Platform
+            </Text>
           </View>
         </View>
 
@@ -67,7 +75,9 @@ export default function LanguageSelectScreen() {
                 language === "EN" && styles.radioCircleActive,
               ]}
             >
-              {language === "EN" && <Check size={14} color="#ffffff" strokeWidth={3} />}
+              {language === "EN" && (
+                <Check size={14} color="#ffffff" strokeWidth={3} />
+              )}
             </View>
           </TouchableOpacity>
 
@@ -93,7 +103,9 @@ export default function LanguageSelectScreen() {
                 language === "FR" && styles.radioCircleActive,
               ]}
             >
-              {language === "FR" && <Check size={14} color="#ffffff" strokeWidth={3} />}
+              {language === "FR" && (
+                <Check size={14} color="#ffffff" strokeWidth={3} />
+              )}
             </View>
           </TouchableOpacity>
         </View>
@@ -110,7 +122,9 @@ export default function LanguageSelectScreen() {
           </TouchableOpacity>
 
           <View style={styles.footerRow}>
-            <Text style={styles.footerMuted}>{t.onboarding.alreadyHaveAccount} </Text>
+            <Text style={styles.footerMuted}>
+              {t.onboarding.alreadyHaveAccount}{" "}
+            </Text>
             <TouchableOpacity onPress={() => router.replace("/")}>
               <Text style={styles.footerLink}>{t.onboarding.login}</Text>
             </TouchableOpacity>

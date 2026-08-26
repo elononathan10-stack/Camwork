@@ -31,6 +31,7 @@ import {
 import { theme } from "./theme";
 import { useUser, JobListing } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SeekerDashboard: React.FC = () => {
   const {
@@ -43,6 +44,7 @@ const SeekerDashboard: React.FC = () => {
     jobs,
   } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const unreadNotifs = notifications.filter((n) => n.unread).length;
   const priorityJob = jobs.find((j) => j.isPriorityMatch) || jobs[0];
@@ -68,7 +70,10 @@ const SeekerDashboard: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 36 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Top Header: Seeker Snippet + Notifications */}

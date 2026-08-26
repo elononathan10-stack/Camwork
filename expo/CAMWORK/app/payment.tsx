@@ -19,8 +19,13 @@ import {
   ShieldCheck,
 } from "lucide-react-native";
 import { theme } from "@/components/theme";
+import { createPayment } from "@/components/api";
+import { useUser } from "@/context/UserContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function PaymentScreen() {
+  const { user } = useUser();
+  const insets = useSafeAreaInsets();
   const [method, setMethod] = useState<"mobile-money" | "card">("mobile-money");
   const [enabled, setEnabled] = useState(false);
   const [amount, setAmount] = useState("25000");
@@ -32,10 +37,22 @@ export default function PaymentScreen() {
       "Payments are held in CamWork until both parties confirm the transaction.",
     );
   };
-  const simulatePayment = () => {
-    if (!amount.trim()) return;
+  const simulatePayment = async () => {
+    if (!amount.trim() || !user?.email) {
+      Alert.alert("Payment unavailable", "Sign in before creating a payment.");
+      return;
+    }
     setStatus("processing");
-    setTimeout(() => setStatus("paid"), 900);
+    try {
+      await createPayment({ payerEmail: user.email, amount, method });
+      setStatus("paid");
+    } catch (error) {
+      setStatus("idle");
+      Alert.alert(
+        "Payment failed",
+        error instanceof Error ? error.message : "Unable to create payment.",
+      );
+    }
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -50,73 +67,87 @@ export default function PaymentScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.trust}>
-          <ShieldCheck size={22} color={theme.colors.primary} />
-          <View style={styles.flex}>
-            <Text style={styles.trustTitle}>Protected transactions</Text>
-            <Text style={styles.sub}>
-              Keep payment and delivery confirmation inside CamWork. Never share
-              contact details to arrange payment.
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.sectionTitle}>Payment method</Text>
-        <TouchableOpacity
-          style={[styles.method, method === "mobile-money" && styles.active]}
-          onPress={() => setMethod("mobile-money")}
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: 32 + insets.bottom },
+          ]}
+          keyboardShouldPersistTaps="handled"
         >
-          <CreditCard size={20} color={theme.colors.primary} />
-          <View style={styles.flex}>
-            <Text style={styles.methodTitle}>Mobile Money</Text>
-            <Text style={styles.sub}>
-              MTN MoMo or Orange Money through the configured provider.
-            </Text>
+          <View style={styles.trust}>
+            <ShieldCheck size={22} color={theme.colors.primary} />
+            <View style={styles.flex}>
+              <Text style={styles.trustTitle}>Protected transactions</Text>
+              <Text style={styles.sub}>
+                Keep payment and delivery confirmation inside CamWork. Never
+                share contact details to arrange payment.
+              </Text>
+            </View>
           </View>
-          {method === "mobile-money" && (
-            <CheckCircle2 size={20} color={theme.colors.primary} />
+          <Text style={styles.sectionTitle}>Payment method</Text>
+          <TouchableOpacity
+            style={[styles.method, method === "mobile-money" && styles.active]}
+            onPress={() => setMethod("mobile-money")}
+          >
+            <CreditCard size={20} color={theme.colors.primary} />
+            <View style={styles.flex}>
+              <Text style={styles.methodTitle}>Mobile Money</Text>
+              <Text style={styles.sub}>
+                MTN MoMo or Orange Money through the configured provider.
+              </Text>
+            </View>
+            {method === "mobile-money" && (
+              <CheckCircle2 size={20} color={theme.colors.primary} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.method, method === "card" && styles.active]}
+            onPress={() => setMethod("card")}
+          >
+            <CreditCard size={20} color={theme.colors.primary} />
+            <View style={styles.flex}>
+              <Text style={styles.methodTitle}>Bank card</Text>
+              <Text style={styles.sub}>
+                Available when a card payment provider is configured.
+              </Text>
+            </View>
+            {method === "card" && (
+              <CheckCircle2 size={20} color={theme.colors.primary} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={save}>
+            <Text style={styles.buttonText}>
+              {enabled ? "Payment method saved" : "Save payment method"}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Transaction simulation</Text>
+          <TextInput
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="numeric"
+            placeholder="Amount in FCFA"
+            placeholderTextColor="#94a3b8"
+            style={styles.amountInput}
+          />
+          <TouchableOpacity
+            style={[styles.button, status === "paid" && styles.paidButton]}
+            onPress={simulatePayment}
+            disabled={status === "processing"}
+          >
+            <Text style={styles.buttonText}>
+              {status === "processing"
+                ? "Processing..."
+                : status === "paid"
+                  ? "Payment simulated"
+                  : "Simulate payment"}
+            </Text>
+          </TouchableOpacity>
+          {status === "paid" && (
+            <Text style={styles.successText}>
+              Funds held safely until the transaction is confirmed.
+            </Text>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.method, method === "card" && styles.active]}
-          onPress={() => setMethod("card")}
-        >
-          <CreditCard size={20} color={theme.colors.primary} />
-          <View style={styles.flex}>
-            <Text style={styles.methodTitle}>Bank card</Text>
-            <Text style={styles.sub}>
-              Available when a card payment provider is configured.
-            </Text>
-          </View>
-          {method === "card" && (
-            <CheckCircle2 size={20} color={theme.colors.primary} />
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={save}>
-          <Text style={styles.buttonText}>
-            {enabled ? "Payment method saved" : "Save payment method"}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.sectionTitle}>Transaction simulation</Text>
-        <TextInput
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-          placeholder="Amount in FCFA"
-          placeholderTextColor="#94a3b8"
-          style={styles.amountInput}
-        />
-        <TouchableOpacity
-          style={[styles.button, status === "paid" && styles.paidButton]}
-          onPress={simulatePayment}
-          disabled={status === "processing"}
-        >
-          <Text style={styles.buttonText}>
-            {status === "processing" ? "Processing..." : status === "paid" ? "Payment simulated" : "Simulate payment"}
-          </Text>
-        </TouchableOpacity>
-        {status === "paid" && <Text style={styles.successText}>Funds held safely until the transaction is confirmed.</Text>}
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

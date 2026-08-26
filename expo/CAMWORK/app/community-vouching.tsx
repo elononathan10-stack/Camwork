@@ -36,7 +36,8 @@ const INITIAL_VOUCHES: VouchItem[] = [
     relationship: "Former Department Manager",
     date: "3 months ago",
     verifiedBadge: true,
-    comment: "I mentored Jean for 3 years. His integrity, meticulous customs paperwork, and team leadership are exemplary.",
+    comment:
+      "I mentored Jean for 3 years. His integrity, meticulous customs paperwork, and team leadership are exemplary.",
   },
   {
     id: "v2",
@@ -46,7 +47,8 @@ const INITIAL_VOUCHES: VouchItem[] = [
     relationship: "Trade Guild Peer",
     date: "5 months ago",
     verifiedBadge: true,
-    comment: "Jean is a certified member in good standing with verified peer track record across regional corridors.",
+    comment:
+      "Jean is a certified member in good standing with verified peer track record across regional corridors.",
   },
 ];
 
@@ -61,7 +63,10 @@ export default function CommunityVouchingScreen() {
 
   const handleSendRequest = async () => {
     if (!contactInput.trim()) return;
-    await requestVouch(contactInput.trim(), relationInput.trim() || "Colleague");
+    await requestVouch(
+      contactInput.trim(),
+      relationInput.trim() || "Colleague",
+    );
     setIsModalOpen(false);
     setContactInput("");
     setRelationInput("");
@@ -69,7 +74,7 @@ export default function CommunityVouchingScreen() {
       language === "EN" ? "Request Sent!" : "Demande Envoyée !",
       language === "EN"
         ? "We sent an invitation to your peer to endorse your profile."
-        : "Nous avons envoyé une invitation à votre contact pour valider votre recommandation."
+        : "Nous avons envoyé une invitation à votre contact pour valider votre recommandation.",
     );
   };
 
@@ -121,7 +126,9 @@ export default function CommunityVouchingScreen() {
                 onPress={() => setIsModalOpen(true)}
               >
                 <Plus size={14} color={theme.colors.primary} />
-                <Text style={styles.actionPillText}>{t.vouching.requestVouchBtn}</Text>
+                <Text style={styles.actionPillText}>
+                  {t.vouching.requestVouchBtn}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -150,7 +157,7 @@ export default function CommunityVouchingScreen() {
             </View>
 
             <View style={styles.quoteBox}>
-              <Text style={styles.quoteText}>"{item.comment}"</Text>
+              <Text style={styles.quoteText}>&quot;{item.comment}&quot;</Text>
             </View>
           </View>
         )}
@@ -167,7 +174,9 @@ export default function CommunityVouchingScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t.vouching.requestModalTitle}</Text>
+              <Text style={styles.modalTitle}>
+                {t.vouching.requestModalTitle}
+              </Text>
               <TouchableOpacity onPress={() => setIsModalOpen(false)}>
                 <X size={22} color={theme.colors.text} />
               </TouchableOpacity>
@@ -176,7 +185,9 @@ export default function CommunityVouchingScreen() {
             <View style={styles.modalForm}>
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>
-                  {language === "EN" ? "Contact Info" : "Coordonnées du contact"}
+                  {language === "EN"
+                    ? "Contact Info"
+                    : "Coordonnées du contact"}
                 </Text>
                 <TextInput
                   style={styles.modalInput}
@@ -189,7 +200,9 @@ export default function CommunityVouchingScreen() {
 
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>
-                  {language === "EN" ? "Professional Relationship" : "Relation professionnelle"}
+                  {language === "EN"
+                    ? "Professional Relationship"
+                    : "Relation professionnelle"}
                 </Text>
                 <TextInput
                   style={styles.modalInput}

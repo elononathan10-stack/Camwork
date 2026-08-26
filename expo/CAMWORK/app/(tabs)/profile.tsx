@@ -15,31 +15,32 @@ import {
   ShieldCheck,
   Star,
   MapPin,
-  Briefcase,
   Edit3,
-  CheckCircle2,
   Award,
   Users,
   Gift,
   Settings,
   ChevronRight,
   Sparkles,
-  Plus,
-  Clock,
 } from "lucide-react-native";
 import { theme } from "@/components/theme";
 import { useUser } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
   const { user, skills, workHistory, reviews } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 32 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Top Navbar */}
@@ -104,7 +105,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Profile Strength / Completeness Meter */}
           <View style={styles.completenessBox}>
             <View style={styles.completenessHeader}>
               <View
@@ -175,7 +175,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Section: Bio / About Me */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{t.profile.aboutMe}</Text>
           <Text style={styles.bioText}>
@@ -183,7 +182,6 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {/* Section: Skills & Specialties + Edit Skills button */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{t.profile.skills}</Text>
@@ -265,7 +263,9 @@ export default function ProfileScreen() {
                     <Text style={styles.ratingPillText}>{rev.rating}</Text>
                   </View>
                 </View>
-                <Text style={styles.reviewComment}>"{rev.comment}"</Text>
+                <Text style={styles.reviewComment}>
+                  &quot;{rev.comment}&quot;
+                </Text>
                 <Text style={styles.verifiedRoleSub}>
                   {language === "EN" ? "Verified for" : "Certifié pour"}:{" "}
                   {rev.verifiedJobTitle}

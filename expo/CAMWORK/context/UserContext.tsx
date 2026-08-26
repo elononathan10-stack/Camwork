@@ -198,6 +198,10 @@ interface UserContextType {
   removeSkill: (skillId: string) => Promise<void>;
   addWorkHistory: (history: Omit<WorkHistoryItem, "id">) => Promise<void>;
   applyToJob: (job: JobListing, coverNote?: string) => Promise<void>;
+  updateApplicationStatus: (
+    applicationId: string,
+    status: ApplicationItem["status"],
+  ) => Promise<void>;
   toggleSaveJob: (jobId: string) => Promise<void>;
   acceptOffer: (offerId: string) => Promise<void>;
   declineOffer: (offerId: string) => Promise<void>;
@@ -771,7 +775,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error("Error saving account messages:", error),
       );
     }
-  }, [conversations, isLoading, user?.email]);
+  }, [applications, conversations, directOffers, isLoading, user?.email]);
 
   const setUser = async (userData: Partial<SeekerProfile>) => {
     const updated = {
@@ -922,6 +926,41 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       await AsyncStorage.setItem("camwork_saved_jobs", JSON.stringify(next));
     } catch (e) {
       console.error("Error toggling saved job:", e);
+    }
+  };
+
+  const updateApplicationStatus = async (
+    applicationId: string,
+    status: ApplicationItem["status"],
+  ) => {
+    const next = applications.map((application) =>
+      application.id === applicationId
+        ? {
+            ...application,
+            status,
+            nextStep:
+              status === "Accepted"
+                ? "Application validated. Continue the conversation in Messages."
+                : status === "Rejected"
+                  ? "Application declined by the employer."
+                  : application.nextStep,
+          }
+        : application,
+    );
+    setApplications(next);
+    if (user?.email) {
+      await AsyncStorage.setItem(
+        accountStorageKey(user.email),
+        JSON.stringify({
+          skills,
+          workHistory,
+          applications: next,
+          directOffers,
+          savedJobIds,
+          notifications,
+          conversations,
+        } satisfies AccountSnapshot),
+      );
     }
   };
 
@@ -1082,6 +1121,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         removeSkill,
         addWorkHistory,
         applyToJob,
+        updateApplicationStatus,
         toggleSaveJob,
         acceptOffer,
         declineOffer,

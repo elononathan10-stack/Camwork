@@ -28,6 +28,7 @@ import {
 import { theme } from "@/components/theme";
 import { useUser, JobListing } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CATEGORIES = [
   "All",
@@ -52,6 +53,7 @@ const JOB_TYPES = ["All", "Formal", "Gig"];
 export default function SearchScreen() {
   const { jobs, savedJobIds, toggleSaveJob, user } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -150,59 +152,6 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Horizontal Filter Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.quickPillsScroll}
-        >
-          {JOB_TYPES.map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.quickPill,
-                selectedType === type && styles.quickPillActive,
-              ]}
-              onPress={() => setSelectedType(type)}
-            >
-              <Text
-                style={[
-                  styles.quickPillText,
-                  selectedType === type && styles.quickPillTextActive,
-                ]}
-              >
-                {type === "All"
-                  ? t.common.all
-                  : type === "Gig"
-                    ? t.common.gig
-                    : t.common.formal}
-              </Text>
-            </TouchableOpacity>
-          ))}
-
-          {CATEGORIES.filter((c) => c !== "All").map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[
-                styles.quickPill,
-                selectedCategory === cat && styles.quickPillActive,
-              ]}
-              onPress={() =>
-                setSelectedCategory(selectedCategory === cat ? "All" : cat)
-              }
-            >
-              <Text
-                style={[
-                  styles.quickPillText,
-                  selectedCategory === cat && styles.quickPillTextActive,
-                ]}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* Results Header Count */}
         <View style={styles.resultsMetaRow}>
           <Text style={styles.resultsCountText}>
@@ -224,7 +173,10 @@ export default function SearchScreen() {
           data={filteredJobs}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: 24 + insets.bottom },
+          ]}
           renderItem={({ item }) => {
             const isSaved = savedJobIds.includes(item.id);
             return (

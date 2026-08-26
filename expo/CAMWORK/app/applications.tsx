@@ -26,6 +26,7 @@ import {
 import { theme } from "@/components/theme";
 import { useUser, ApplicationItem } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type TabFilter =
   | "All"
@@ -38,6 +39,7 @@ type TabFilter =
 export default function ApplicationsScreen() {
   const { applications } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<TabFilter>("All");
 
@@ -144,7 +146,10 @@ export default function ApplicationsScreen() {
         style={styles.applicationsList}
         data={filteredApps}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 24 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           const badge = getStatusBadge(item.status);
