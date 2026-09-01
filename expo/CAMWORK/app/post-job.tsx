@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -12,9 +13,10 @@ import {
   View,
   Alert,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Briefcase, MapPin, Send } from "lucide-react-native";
 import { theme } from "@/components/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   CreateJobInput,
   PLATFORM_CONTACT_BLOCK_MESSAGE,
@@ -31,14 +33,31 @@ const CATEGORIES = [
 ];
 
 export default function PostJobScreen() {
-  const { user, createJob } = useUser();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { user, jobs, createJob, updateJob } = useUser();
+  const insets = useSafeAreaInsets();
+  const existingJob = id ? jobs.find((job) => job.id === id) : undefined;
+  const isEditing = Boolean(existingJob);
   const isServiceRequest = user?.role === "seeker";
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
-  const [salary, setSalary] = useState("");
+  const [title, setTitle] = useState(existingJob?.title || "");
+  const [description, setDescription] = useState(
+    existingJob?.description || "",
+  );
+  const [location, setLocation] = useState(existingJob?.location || "");
+  const [category, setCategory] = useState(
+    existingJob?.category || CATEGORIES[0],
+  );
+  const [salary, setSalary] = useState(existingJob?.salary || "");
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!existingJob) return;
+    setTitle(existingJob.title);
+    setDescription(existingJob.description);
+    setLocation(existingJob.location);
+    setCategory(existingJob.category);
+    setSalary(existingJob.salary);
+  }, [existingJob]);
 
   const submit = async () => {
     if (!title.trim() || !description.trim()) return;
@@ -59,7 +78,11 @@ export default function PostJobScreen() {
       skills: [],
     };
     try {
-      await createJob(job, isServiceRequest);
+      if (isEditing && existingJob) {
+        await updateJob(existingJob.id, job, existingJob.isServiceRequest);
+      } else {
+        await createJob(job, isServiceRequest);
+      }
       setIsSaving(false);
       router.replace("/(tabs)/search");
     } catch (error) {
@@ -81,17 +104,26 @@ export default function PostJobScreen() {
           <ArrowLeft size={21} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {isServiceRequest ? "Request a service" : "Create a job offer"}
+          {isEditing
+            ? "Edit job post"
+            : isServiceRequest
+              ? "Request a service"
+              : "Create a job offer"}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 58 : 0}
         style={styles.flex}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: 36 + insets.bottom },
+          ]}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           <View style={styles.intro}>
             {isServiceRequest ? (
@@ -101,14 +133,18 @@ export default function PostJobScreen() {
             )}
             <View style={styles.flex}>
               <Text style={styles.title}>
-                {isServiceRequest
-                  ? "Describe what you need"
-                  : "Find the right person"}
+                {isEditing
+                  ? "Update your published listing"
+                  : isServiceRequest
+                    ? "Describe what you need"
+                    : "Find the right person"}
               </Text>
               <Text style={styles.subtitle}>
-                {isServiceRequest
-                  ? "Tell skilled professionals what service you are looking for."
-                  : "Publish the role and let qualified people contact you."}
+                {isEditing
+                  ? "Keep the details accurate for applicants."
+                  : isServiceRequest
+                    ? "Tell skilled professionals what service you are looking for."
+                    : "Publish the role and let qualified people contact you."}
               </Text>
             </View>
           </View>
@@ -149,14 +185,14 @@ export default function PostJobScreen() {
           </View>
 
           <Text style={styles.label}>Category</Text>
-          <ScrollView
+          <FlatList
             horizontal
+            data={CATEGORIES}
+            keyExtractor={(item) => item}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chips}
-          >
-            {CATEGORIES.map((item) => (
+            renderItem={({ item }) => (
               <TouchableOpacity
-                key={item}
                 style={[styles.chip, category === item && styles.chipActive]}
                 onPress={() => setCategory(item)}
               >
@@ -169,8 +205,8 @@ export default function PostJobScreen() {
                   {item}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
 
           <Text style={styles.label}>
             {isServiceRequest ? "Expected rate" : "Budget or salary"}
@@ -197,7 +233,11 @@ export default function PostJobScreen() {
               <>
                 <Send size={18} color="#fff" />
                 <Text style={styles.submitText}>
-                  {isServiceRequest ? "Publish request" : "Publish job offer"}
+                  {isEditing
+                    ? "Save changes"
+                    : isServiceRequest
+                      ? "Publish request"
+                      : "Publish job offer"}
                 </Text>
               </>
             )}
@@ -237,7 +277,14 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   headerSpacer: { width: 40 },
-  content: { padding: 18, gap: 10, paddingBottom: 36 },
+  content: {
+    padding: 18,
+    gap: 10,
+    paddingBottom: 36,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
+  },
   intro: {
     flexDirection: "row",
     gap: 12,

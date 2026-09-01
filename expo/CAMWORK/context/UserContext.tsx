@@ -1,5 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as FileSystem from "expo-file-system";
+import {
+  ApiError,
+  createApplication,
+  createJob as createJobApi,
+  getApplications,
+  getConversations,
+  updateApplicationStatusApi,
+  validateApplicationApi,
+  uploadVerificationDocumentApi,
+  getDirectOffersApi,
+  updateDirectOfferStatusApi,
+  updateJobStatusApi,
+  createConversation,
+  sendMessage,
+  updateJob as updateJobApi,
+} from "@/components/api";
 
 export interface SkillItem {
   id: string;
@@ -41,6 +59,10 @@ export interface ApplicationItem {
   status: "Pending" | "Reviewed" | "Interviews" | "Accepted" | "Rejected";
   coverNote?: string;
   nextStep?: string;
+  employerValidated?: boolean;
+  seekerValidated?: boolean;
+  paymentValidated?: boolean;
+  employmentStatus?: "pending" | "active" | "rejected";
 }
 
 export interface DirectOfferItem {
@@ -133,6 +155,7 @@ export interface JobListing {
   postedBy?: string;
   postedByRole?: "seeker" | "employer";
   isServiceRequest?: boolean;
+  status?: "open" | "closed" | "filled" | "archived";
 }
 
 export type CreateJobInput = Pick<
@@ -185,11 +208,21 @@ interface UserContextType {
   conversations: ConversationItem[];
   jobs: JobListing[];
   createJob: (job: CreateJobInput, isServiceRequest?: boolean) => Promise<void>;
+  updateJob: (
+    jobId: string,
+    job: CreateJobInput,
+    isServiceRequest?: boolean,
+  ) => Promise<void>;
+  updateJobStatus: (
+    jobId: string,
+    status: NonNullable<JobListing["status"]>,
+  ) => Promise<void>;
   switchRole: (role: "seeker" | "employer") => Promise<void>;
   startConversation: (
     recipientName: string,
     companyName: string,
     jobContext: string,
+    recipientEmail?: string,
   ) => Promise<string>;
   isLoading: boolean;
   setUser: (user: Partial<SeekerProfile>) => Promise<void>;
@@ -201,6 +234,10 @@ interface UserContextType {
   updateApplicationStatus: (
     applicationId: string,
     status: ApplicationItem["status"],
+  ) => Promise<void>;
+  validateApplication: (
+    applicationId: string,
+    validated: boolean,
   ) => Promise<void>;
   toggleSaveJob: (jobId: string) => Promise<void>;
   acceptOffer: (offerId: string) => Promise<void>;
@@ -711,7 +748,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
-  const [jobs, setJobs] = useState<JobListing[]>([]);
+  const [jobs, setJobs] = useState<JobListing[]>(INITIAL_JOBS);
   const [isLoading, setIsLoading] = useState(true);
 
   const accountStorageKey = (email: string) =>
@@ -752,14 +789,24 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         const savedUser = await AsyncStorage.getItem("camwork_user");
         if (savedUser) {
           const savedProfile = JSON.parse(savedUser) as SeekerProfile;
-          setUserState(savedProfile);
-          if (savedProfile.email)
+          // Removes the old development account that was previously persisted
+          // on every test device. New installs always start with empty fields.
+          if (
+            savedProfile.email?.trim().toLowerCase() ===
+            "elononathan10@gmail.com"
+          ) {
+            await AsyncStorage.multiRemove(["camwork_user", "camwork_token"]);
+          } else {
+            setUserState(savedProfile);
+          }
+          if (
+            savedProfile.email &&
+            savedProfile.email.trim().toLowerCase() !==
+              "elononathan10@gmail.com"
+          )
             await restoreAccountSnapshot(savedProfile.email);
         }
-        const savedJobs = await AsyncStorage.getItem("camwork_jobs");
-        if (savedJobs) {
-          setJobs(JSON.parse(savedJobs));
-        }
+        setJobs(INITIAL_JOBS);
       } catch (error) {
         console.error("Failed to load user state from storage:", error);
       } finally {
@@ -770,12 +817,68 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
+    if (isLoading) return;
+    setJobs((currentJobs) =>
+      currentJobs.length > 0 ? currentJobs : INITIAL_JOBS,
+    );
+  }, [isLoading]);
+
+  useEffect(() => {
     if (!isLoading && user?.email) {
       saveAccountSnapshot(user.email).catch((error) =>
         console.error("Error saving account messages:", error),
       );
     }
   }, [applications, conversations, directOffers, isLoading, user?.email]);
+
+  const clearExpiredSession = async (error: unknown) => {
+    if (error instanceof ApiError && error.status === 401) {
+      await AsyncStorage.multiRemove(["camwork_user", "camwork_token"]);
+      setUserState(null);
+      return true;
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    if (isLoading || !user?.email) return;
+    getApplications(user.role)
+      .then(setApplications)
+      .catch(async (error) => {
+        if (!(await clearExpiredSession(error))) {
+          console.error("Failed to load shared applications:", error);
+        }
+      });
+  }, [isLoading, user?.email, user?.role]);
+
+  useEffect(() => {
+    if (isLoading || !user?.email) return;
+    getConversations()
+      .then((remoteConversations) => {
+        if (remoteConversations.length > 0)
+          setConversations(remoteConversations);
+      })
+      .catch((error) =>
+        clearExpiredSession(error).then((wasExpired) => {
+          if (!wasExpired)
+            console.error("Failed to load shared conversations:", error);
+        }),
+      );
+  }, [isLoading, user?.email]);
+
+  useEffect(() => {
+    if (isLoading || !user?.email) return;
+    getDirectOffersApi(user.role)
+      .then((remoteOffers) => {
+        if (remoteOffers.length > 0) setDirectOffers(remoteOffers);
+      })
+      .catch((error) =>
+        clearExpiredSession(error).then((wasExpired) => {
+          if (!wasExpired)
+            console.error("Failed to load direct offers:", error);
+        }),
+      );
+  }, [isLoading, user?.email, user?.role]);
 
   const setUser = async (userData: Partial<SeekerProfile>) => {
     const updated = {
@@ -817,21 +920,43 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     if (containsRestrictedContact(listingText)) {
       throw new Error(PLATFORM_CONTACT_BLOCK_MESSAGE);
     }
-    const newJob: JobListing = {
+    const savedJob = await createJobApi({
       ...job,
-      id: `job-${Date.now()}`,
-      postedTime: "Just now",
-      matchScore: 0,
       employerVerified: user.isVerified,
-      rating: 0,
-      reviewCount: 0,
-      postedBy: user.email,
-      postedByRole: user.role,
       isServiceRequest,
-    };
-    const next = [newJob, ...jobs];
-    setJobs(next);
-    await AsyncStorage.setItem("camwork_jobs", JSON.stringify(next));
+    });
+    setJobs((previous) => [savedJob, ...previous]);
+  };
+
+  const updateJob = async (
+    jobId: string,
+    job: CreateJobInput,
+    isServiceRequest = false,
+  ) => {
+    if (!user) return;
+    const text = [job.title, job.description, job.location, job.salary].join(
+      " ",
+    );
+    if (containsRestrictedContact(text))
+      throw new Error(PLATFORM_CONTACT_BLOCK_MESSAGE);
+    const savedJob = await updateJobApi(jobId, {
+      ...job,
+      employerVerified: user.isVerified,
+      isServiceRequest,
+    });
+    setJobs((previous) =>
+      previous.map((item) => (item.id === jobId ? savedJob : item)),
+    );
+  };
+
+  const updateJobStatus = async (
+    jobId: string,
+    status: NonNullable<JobListing["status"]>,
+  ) => {
+    const savedJob = await updateJobStatusApi(jobId, status);
+    setJobs((previous) =>
+      previous.map((item) => (item.id === jobId ? savedJob : item)),
+    );
   };
 
   const addSkill = async (skillName: string) => {
@@ -876,24 +1001,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const applyToJob = async (job: JobListing, coverNote?: string) => {
+    if (
+      job.postedBy?.trim().toLowerCase() === user?.email?.trim().toLowerCase()
+    ) {
+      throw new Error("You cannot apply to your own job posting.");
+    }
     const exists = applications.find((a) => a.jobId === job.id);
     if (exists) return;
 
-    const newApp: ApplicationItem = {
-      id: `app-${Date.now()}`,
+    const savedApplication = await createApplication({
       jobId: job.id,
-      jobTitle: job.title,
-      companyName: job.company,
-      location: job.location,
-      salary: job.salary,
-      type: job.type,
-      appliedDate: "Just now",
-      status: "Pending",
-      coverNote: coverNote,
-      nextStep: "Application sent. Recruiter review pending.",
-    };
-
-    const next = [newApp, ...applications];
+      coverNote,
+    });
+    const next = [savedApplication, ...applications];
     setApplications(next);
     try {
       await AsyncStorage.setItem("camwork_applications", JSON.stringify(next));
@@ -933,6 +1053,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     applicationId: string,
     status: ApplicationItem["status"],
   ) => {
+    await updateApplicationStatusApi(applicationId, status);
     const next = applications.map((application) =>
       application.id === applicationId
         ? {
@@ -964,15 +1085,32 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const validateApplication = async (
+    applicationId: string,
+    validated: boolean,
+  ) => {
+    const savedApplication = await validateApplicationApi(
+      applicationId,
+      validated,
+    );
+    setApplications((previous) =>
+      previous.map((application) =>
+        application.id === applicationId ? savedApplication : application,
+      ),
+    );
+  };
+
   const acceptOffer = async (offerId: string) => {
+    const savedOffer = await updateDirectOfferStatusApi(offerId, "Accepted");
     setDirectOffers((prev) =>
-      prev.map((o) => (o.id === offerId ? { ...o, status: "Accepted" } : o)),
+      prev.map((o) => (o.id === offerId ? savedOffer : o)),
     );
   };
 
   const declineOffer = async (offerId: string) => {
+    const savedOffer = await updateDirectOfferStatusApi(offerId, "Declined");
     setDirectOffers((prev) =>
-      prev.map((o) => (o.id === offerId ? { ...o, status: "Declined" } : o)),
+      prev.map((o) => (o.id === offerId ? savedOffer : o)),
     );
   };
 
@@ -1013,6 +1151,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       isMe: true,
     };
 
+    await sendMessage(conversationId, text.trim()).catch(() => undefined);
+
     setConversations((prev) =>
       prev.map((conv) => {
         if (conv.id === conversationId) {
@@ -1032,7 +1172,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     recipientName: string,
     companyName: string,
     jobContext: string,
+    recipientEmail?: string,
   ) => {
+    if (recipientEmail) {
+      const remoteConversation = await createConversation({
+        recipientEmail,
+        recipientName,
+        companyName,
+        jobContext,
+      });
+      setConversations((previous) => [remoteConversation, ...previous]);
+      return remoteConversation.id;
+    }
     const conversationId = `conv-${Date.now()}`;
     const conversation: ConversationItem = {
       id: conversationId,
@@ -1053,6 +1204,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     docType: "id" | "certificate",
     documentUri: string,
   ) => {
+    const data = await FileSystem.readAsStringAsync(documentUri, {
+      encoding: "base64",
+    });
+    const fileName = documentUri.split("/").pop() || `${docType}.upload`;
+    await uploadVerificationDocumentApi({
+      documentType: docType,
+      fileName,
+      mimeType: fileName.toLowerCase().endsWith(".pdf")
+        ? "application/pdf"
+        : "image/jpeg",
+      data,
+    });
     if (docType === "id") {
       await updateProfile({
         idDocumentUploaded: true,
@@ -1067,6 +1230,33 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     }
   };
+
+  const visibleJobs = jobs.filter((job) => {
+    if (!user || user.role !== "seeker" || skills.length === 0) return true;
+    const aptitudeText = [
+      user.headline,
+      user.bio,
+      ...skills.map((skill) => skill.name),
+    ]
+      .join(" ")
+      .toLowerCase();
+    const jobText = [
+      job.title,
+      job.category,
+      job.description,
+      ...job.skills,
+      ...job.requirements,
+    ]
+      .join(" ")
+      .toLowerCase();
+    return (
+      skills.some((skill) => jobText.includes(skill.name.toLowerCase())) ||
+      aptitudeText
+        .split(/[^a-z0-9]+/)
+        .filter((word) => word.length > 3)
+        .some((word) => jobText.includes(word))
+    );
+  });
 
   const logout = async () => {
     if (user?.email) {
@@ -1110,8 +1300,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         savedJobIds,
         notifications,
         conversations,
-        jobs,
+        jobs: visibleJobs,
         createJob,
+        updateJob,
+        updateJobStatus,
         switchRole,
         startConversation,
         isLoading,
@@ -1122,6 +1314,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         addWorkHistory,
         applyToJob,
         updateApplicationStatus,
+        validateApplication,
         toggleSaveJob,
         acceptOffer,
         declineOffer,

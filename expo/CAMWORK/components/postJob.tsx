@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
@@ -7,10 +7,22 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  FlatList,
 } from "react-native";
 import { theme } from "./theme";
 
+const categories = [
+  "General",
+  "Technology",
+  "Construction",
+  "Logistics",
+  "Home Services",
+  "Professional Services",
+];
+
 const PostJobScreen = () => {
+  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -33,7 +45,34 @@ const PostJobScreen = () => {
           />
         </View>
 
-        {/* Other fields: Category, Location, Seeker Type, etc. */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Category</Text>
+          <FlatList
+            horizontal
+            data={categories}
+            keyExtractor={(item) => item}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  selectedCategory === item && styles.chipActive,
+                ]}
+                onPress={() => setSelectedCategory(item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    selectedCategory === item && styles.chipTextActive,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
 
         <TouchableOpacity style={styles.mainBtn}>
           <Text style={styles.mainBtnText}>Publish Job</Text>
@@ -77,6 +116,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text,
     backgroundColor: theme.colors.inputBackground,
+  },
+  chips: {
+    paddingVertical: 4,
+    gap: 8,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.inputBackground,
+  },
+  chipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  chipText: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  chipTextActive: {
+    color: "#fff",
   },
   mainBtn: {
     backgroundColor: theme.colors.primary,

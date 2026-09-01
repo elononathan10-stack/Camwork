@@ -43,9 +43,22 @@ export const getApiBaseUrl = (): string => {
     return "http://10.0.2.2:3000";
   }
 
-  // 5. Fallback LAN IP for current local network
-  return "http://192.168.100.8:3000";
+  // A standalone build must explicitly point to the deployed shared API.
+  // A private development-machine IP makes each phone appear to have its own data.
+  throw new Error(
+    "EXPO_PUBLIC_API_URL is required for a standalone build. Set it to your public CamWork API URL.",
+  );
 };
+
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
 
 const handleApiResponse = async (response: Response) => {
   let data: any = {};
@@ -66,7 +79,7 @@ const handleApiResponse = async (response: Response) => {
           : response.status === 409
             ? "An account already exists with this email."
             : `Server error (${response.status})`);
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
 
   return data;
@@ -88,7 +101,6 @@ export const loginUser = async (credentials: {
         password: credentials.password,
       }),
     });
-
     const result = (await handleApiResponse(response)) as LoginResponse;
     if (result?.token) {
       await AsyncStorage.setItem("camwork_token", result.token);
@@ -197,6 +209,7 @@ export const createPayment = async (payload: {
   payerEmail: string;
   amount: string;
   method: "mobile-money" | "card";
+  applicationId?: string;
 }) => {
   const baseUrl = getApiBaseUrl();
   const response = await fetch(`${baseUrl}/api/payments`, {
@@ -206,3 +219,117 @@ export const createPayment = async (payload: {
   });
   return handleApiResponse(response);
 };
+
+const authenticatedRequest = async (
+  path: string,
+  options: RequestInit = {},
+) => {
+  const token = await AsyncStorage.getItem("camwork_token");
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+  if (response.status === 401) {
+    await AsyncStorage.removeItem("camwork_token");
+  }
+  return handleApiResponse(response);
+};
+
+export const createJob = async (job: object) =>
+  authenticatedRequest("/api/jobs", {
+    method: "POST",
+    body: JSON.stringify(job),
+  });
+
+export const updateJob = async (jobId: string, job: object) =>
+  authenticatedRequest(`/api/jobs/${jobId}`, {
+    method: "PUT",
+    body: JSON.stringify(job),
+  });
+
+export const deleteJob = async (jobId: string) =>
+  authenticatedRequest(`/api/jobs/${jobId}`, { method: "DELETE" });
+
+export const getConversations = async () =>
+  authenticatedRequest("/api/messages");
+
+export const createConversation = async (conversation: object) =>
+  authenticatedRequest("/api/messages", {
+    method: "POST",
+    body: JSON.stringify(conversation),
+  });
+
+export const sendMessage = async (conversationId: string, text: string) =>
+  authenticatedRequest(`/api/messages/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+
+export const getApplications = async (role: "seeker" | "employer") =>
+  authenticatedRequest(`/api/applications?role=${role}`);
+
+export const createApplication = async (application: object) =>
+  authenticatedRequest("/api/applications", {
+    method: "POST",
+    body: JSON.stringify(application),
+  });
+
+export const updateApplicationStatusApi = async (
+  applicationId: string,
+  status: string,
+) =>
+  authenticatedRequest(`/api/applications/${applicationId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+export const validateApplicationApi = async (
+  applicationId: string,
+  validated: boolean,
+) =>
+  authenticatedRequest(`/api/applications/${applicationId}/validate`, {
+    method: "PATCH",
+    body: JSON.stringify({ validated }),
+  });
+
+export const updateJobStatusApi = async (jobId: string, status: string) =>
+  authenticatedRequest(`/api/jobs/${jobId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+export const uploadVerificationDocumentApi = async (payload: {
+  documentType: "id" | "certificate";
+  fileName: string;
+  mimeType: string;
+  data: string;
+}) =>
+  authenticatedRequest("/api/user/verification/documents", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const searchWorkersApi = async (query: string) =>
+  authenticatedRequest(`/api/user/workers?q=${encodeURIComponent(query)}`);
+
+export const createDirectOfferApi = async (payload: object) =>
+  authenticatedRequest("/api/direct-offers", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const getDirectOffersApi = async (role: "seeker" | "employer") =>
+  authenticatedRequest(`/api/direct-offers?role=${role}`);
+
+export const updateDirectOfferStatusApi = async (
+  offerId: string,
+  status: "Accepted" | "Declined",
+) =>
+  authenticatedRequest(`/api/direct-offers/${offerId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
