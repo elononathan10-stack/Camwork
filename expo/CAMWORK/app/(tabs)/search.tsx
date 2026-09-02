@@ -64,8 +64,6 @@ export default function SearchScreen() {
   // Filtered job list
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
-      if (user?.role === "employer" && !job.isServiceRequest) return false;
-      if (user?.role === "seeker" && job.isServiceRequest) return false;
       const matchesQuery =
         searchQuery.trim() === "" ||
         job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

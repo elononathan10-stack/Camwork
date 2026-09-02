@@ -59,7 +59,8 @@ export default function PostJobScreen() {
       )
     : undefined;
   const isEditing = Boolean(existingJob);
-  const isServiceRequest = user?.role === "seeker";
+  // Both job seekers and employers can publish normal job offers.
+  const isServiceRequest = false;
 
   const [title, setTitle] = useState(existingJob?.title || "");
   const [description, setDescription] = useState(

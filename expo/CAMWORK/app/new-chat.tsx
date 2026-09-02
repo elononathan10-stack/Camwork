@@ -3,7 +3,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,8 +14,10 @@ import { router } from "expo-router";
 import { ArrowLeft, MessageSquare, Send } from "lucide-react-native";
 import { PLATFORM_CONTACT_BLOCK_MESSAGE, useUser } from "@/context/UserContext";
 import { theme } from "@/components/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function NewChatScreen() {
+  const insets = useSafeAreaInsets();
   const { startConversation } = useUser();
   const [recipient, setRecipient] = useState("");
   const [company, setCompany] = useState("");
@@ -35,7 +36,7 @@ export default function NewChatScreen() {
     }
   };
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.back} onPress={() => router.back()}>
           <ArrowLeft size={21} color={theme.colors.text} />
@@ -50,6 +51,7 @@ export default function NewChatScreen() {
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           <View style={styles.intro}>
             <MessageSquare size={22} color={theme.colors.primary} />
@@ -94,7 +96,7 @@ export default function NewChatScreen() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 const styles = StyleSheet.create({

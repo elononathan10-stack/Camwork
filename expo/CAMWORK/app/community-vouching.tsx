@@ -26,6 +26,7 @@ import {
 import { theme } from "@/components/theme";
 import { useUser, VouchItem } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const INITIAL_VOUCHES: VouchItem[] = [
   {
@@ -53,20 +54,19 @@ const INITIAL_VOUCHES: VouchItem[] = [
 ];
 
 export default function CommunityVouchingScreen() {
-  const { user, requestVouch } = useUser();
+  const { requestVouch } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const [vouches, setVouches] = useState<VouchItem[]>(INITIAL_VOUCHES);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [contactInput, setContactInput] = useState("");
   const [relationInput, setRelationInput] = useState("");
 
-  const handleSendRequest = async () => {
-    if (!contactInput.trim()) return;
-    await requestVouch(
-      contactInput.trim(),
-      relationInput.trim() || "Colleague",
-    );
+  const handleSendRequest = () => {
+    if (!contactInput.trim() || !relationInput.trim()) return;
+
+    requestVouch(contactInput.trim(), relationInput.trim());
     setIsModalOpen(false);
     setContactInput("");
     setRelationInput("");
@@ -79,7 +79,7 @@ export default function CommunityVouchingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       {/* Top Navbar */}
       <View style={styles.navBar}>
@@ -102,7 +102,10 @@ export default function CommunityVouchingScreen() {
       <FlatList
         data={vouches}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 60 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={{ gap: 14, marginBottom: 8 }}>
@@ -226,7 +229,7 @@ export default function CommunityVouchingScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

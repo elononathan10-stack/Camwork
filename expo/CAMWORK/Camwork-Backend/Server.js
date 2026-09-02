@@ -42,8 +42,8 @@ const PORT = Number(process.env.PORT || 3000);
 
 const start = async () => {
   await connectToDatabase();
-  // Safely synchronize database schema to ensure all columns (avatar, headline, bio, etc.) exist
-  await sequelize.sync({ alter: true });
+  // Keep production data intact. Opt in to schema alteration only for a migration.
+  await sequelize.sync({ alter: process.env.DB_SYNC_ALTER === "true" });
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`CamWork API listening on port ${PORT}`);
   });

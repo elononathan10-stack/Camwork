@@ -56,6 +56,7 @@ export const searchWorkers = async (req, res) => {
 export const updateProfile = async (req, res) => {
   const allowed = [
     "name",
+    "role",
     "avatar",
     "headline",
     "bio",
@@ -66,6 +67,13 @@ export const updateProfile = async (req, res) => {
   const updates = Object.fromEntries(
     Object.entries(req.body || {}).filter(([key]) => allowed.includes(key)),
   );
+  if (updates.role) {
+    const role = String(updates.role).toLowerCase();
+    if (!['seeker', 'employer'].includes(role)) {
+      return res.status(422).json({ error: "Invalid account role." });
+    }
+    updates.role = role;
+  }
   if (updates.skills) updates.skills = JSON.stringify(updates.skills);
   const user = await User.findOne({ where: { email: req.auth.email } });
   if (!user) return res.status(404).json({ error: "Account not found." });
@@ -147,7 +155,7 @@ export const register = async (req, res) => {
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll();
-    res.status(200).json(users);
+    res.status(200).json(users.map(publicUser));
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
