@@ -47,7 +47,7 @@ export default function DirectOffersScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       {/* Top Navbar */}
       <View style={styles.navBar}>
@@ -220,7 +220,7 @@ export default function DirectOffersScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

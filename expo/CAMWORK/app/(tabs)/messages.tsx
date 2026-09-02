@@ -38,7 +38,7 @@ export default function MessagesScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
         <View style={styles.header}>
@@ -136,7 +136,7 @@ export default function MessagesScreen() {
           }
         />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

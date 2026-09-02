@@ -6,12 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
   StatusBar,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -24,16 +24,20 @@ import {
   Briefcase,
   MapPin,
   DollarSign,
-  FileText,
+  Camera,
+  CheckCircle2,
   Sparkles,
 } from "lucide-react-native";
 import { theme } from "@/components/theme";
 import { useUser } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EditProfileScreen() {
   const { user, updateProfile, skills, addSkill, removeSkill } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const isEn = language === "EN";
 
   const [name, setName] = useState(user?.name || "");
   const [headline, setHeadline] = useState(user?.headline || "");
@@ -44,31 +48,85 @@ export default function EditProfileScreen() {
   const [bio, setBio] = useState(user?.bio || "");
   const [newSkillInput, setNewSkillInput] = useState("");
 
-  const changePhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled) await updateProfile({ avatar: result.assets[0].uri });
+  // Profile Picture state
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
+  const [photoSavedSuccess, setPhotoSavedSuccess] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const choosePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPendingPhotoUri(result.assets[0].uri);
+        setPhotoSavedSuccess(false);
+      }
+    } catch (err) {
+      console.error("Error picking photo:", err);
+    }
+  };
+
+  const saveProfilePicture = async () => {
+    if (!pendingPhotoUri) return;
+    setIsSavingPhoto(true);
+    try {
+      await updateProfile({ avatar: pendingPhotoUri });
+      setIsSavingPhoto(false);
+      setPhotoSavedSuccess(true);
+      setPendingPhotoUri(null);
+      Alert.alert(
+        isEn ? "Photo Saved" : "Photo enregistrée",
+        isEn
+          ? "Your profile picture has been updated successfully!"
+          : "Votre photo de profil a été mise à jour avec succès !",
+      );
+    } catch (e) {
+      setIsSavingPhoto(false);
+      Alert.alert(
+        isEn ? "Error" : "Erreur",
+        isEn
+          ? "Failed to save profile picture."
+          : "Échec de l'enregistrement de la photo de profil.",
+      );
+    }
   };
 
   const handleSave = async () => {
-    await updateProfile({
-      name,
-      headline,
-      location,
-      expectedRate,
-      bio,
-    });
-    Alert.alert(
-      language === "EN" ? "Profile Updated" : "Profil mis à jour",
-      language === "EN"
-        ? "Your changes have been saved successfully."
-        : "Vos modifications ont été enregistrées avec succès.",
-      [{ text: "OK", onPress: () => router.back() }],
-    );
+    setIsSavingProfile(true);
+    try {
+      const updates: Record<string, string> = {
+        name,
+        headline,
+        location,
+        expectedRate,
+        bio,
+      };
+      if (pendingPhotoUri) {
+        updates.avatar = pendingPhotoUri;
+      }
+      await updateProfile(updates);
+      setIsSavingProfile(false);
+      Alert.alert(
+        isEn ? "Profile Updated" : "Profil mis à jour",
+        isEn
+          ? "Your changes have been saved successfully."
+          : "Vos modifications ont été enregistrées avec succès.",
+        [{ text: "OK", onPress: () => router.back() }],
+      );
+    } catch (e) {
+      setIsSavingProfile(false);
+      Alert.alert(
+        isEn ? "Error" : "Erreur",
+        isEn
+          ? "Failed to save profile changes."
+          : "Impossible d'enregistrer les modifications.",
+      );
+    }
   };
 
   const handleAddSkill = async () => {
@@ -78,25 +136,34 @@ export default function EditProfileScreen() {
     }
   };
 
+  const currentDisplayAvatar = pendingPhotoUri || user?.avatar;
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
-      {/* Top Navbar */}
+
+      {/* Responsive Top Navbar */}
       <View style={styles.navBar}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <ArrowLeft size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.navTitle}>
-          {language === "EN"
-            ? "Edit Profile & Skills"
-            : "Modifier Profil & Compétences"}
+          {isEn ? "Edit Profile & Skills" : "Modifier Profil & Compétences"}
         </Text>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>{t.common.save}</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, isSavingProfile && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={isSavingProfile}
+        >
+          {isSavingProfile ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <Text style={styles.saveBtnText}>{t.common.save}</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -105,30 +172,92 @@ export default function EditProfileScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 36 + insets.bottom },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
+          {/* Profile Picture Card with explicit Save Photo Button */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>
+              {isEn ? "Profile Picture" : "Photo de profil"}
+            </Text>
+
+            <View style={styles.avatarCardContent}>
+              <View style={styles.avatarWrapper}>
+                {currentDisplayAvatar ? (
+                  <Image
+                    source={{ uri: currentDisplayAvatar }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <User size={38} color={theme.colors.primary} />
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.cameraBadge}
+                  onPress={choosePhoto}
+                  activeOpacity={0.8}
+                >
+                  <Camera size={16} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.avatarActions}>
+                <TouchableOpacity
+                  style={styles.changePhotoBtn}
+                  onPress={choosePhoto}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.changePhotoBtnText}>
+                    {isEn ? "Choose New Photo" : "Choisir une photo"}
+                  </Text>
+                </TouchableOpacity>
+
+                {pendingPhotoUri && (
+                  <TouchableOpacity
+                    style={[
+                      styles.savePhotoBtn,
+                      isSavingPhoto && styles.savePhotoBtnDisabled,
+                    ]}
+                    onPress={saveProfilePicture}
+                    disabled={isSavingPhoto}
+                    activeOpacity={0.85}
+                  >
+                    {isSavingPhoto ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <>
+                        <Check size={16} color="#ffffff" strokeWidth={2.5} />
+                        <Text style={styles.savePhotoBtnText}>
+                          {isEn ? "Save Photo" : "Enregistrer la photo"}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+
+                {photoSavedSuccess && !pendingPhotoUri && (
+                  <View style={styles.savedBadgeRow}>
+                    <CheckCircle2 size={15} color="#16a34a" />
+                    <Text style={styles.savedBadgeText}>
+                      {isEn ? "Photo Saved" : "Photo enregistrée"}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+
           {/* Personal Info Card */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>
-              {language === "EN"
-                ? "Personal Details"
-                : "Informations Personnelles"}
+              {isEn ? "Personal Details" : "Informations Personnelles"}
             </Text>
-            <TouchableOpacity style={styles.photoRow} onPress={changePhoto}>
-              {user?.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.photo} />
-              ) : (
-                <User size={28} color={theme.colors.primary} />
-              )}
-              <Text style={styles.photoText}>
-                {language === "EN"
-                  ? "Change profile picture"
-                  : "Changer la photo de profil"}
-              </Text>
-            </TouchableOpacity>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>{t.auth.fullName}</Text>
@@ -139,6 +268,7 @@ export default function EditProfileScreen() {
                   value={name}
                   onChangeText={setName}
                   placeholder="Jean Dupont"
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
             </View>
@@ -152,6 +282,7 @@ export default function EditProfileScreen() {
                   value={headline}
                   onChangeText={setHeadline}
                   placeholder="Senior Logistics Planner"
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
             </View>
@@ -165,6 +296,7 @@ export default function EditProfileScreen() {
                   value={location}
                   onChangeText={setLocation}
                   placeholder="Douala, Littoral"
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
             </View>
@@ -178,6 +310,7 @@ export default function EditProfileScreen() {
                   value={expectedRate}
                   onChangeText={setExpectedRate}
                   placeholder="450,000 FCFA / month"
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
             </View>
@@ -191,6 +324,7 @@ export default function EditProfileScreen() {
               value={bio}
               onChangeText={setBio}
               placeholder={t.wizard.bioPlaceholder}
+              placeholderTextColor="#94a3b8"
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -236,12 +370,12 @@ export default function EditProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
   navBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -267,9 +401,12 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: 12,
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
   },
   saveBtnText: {
     fontSize: 13,
@@ -279,7 +416,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 16,
-    paddingBottom: 36,
+    maxWidth: 720,
+    width: "100%",
+    alignSelf: "center",
   },
   sectionCard: {
     backgroundColor: "#ffffff",
@@ -294,15 +433,89 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: theme.colors.text,
   },
-  photoRow: {
-    minHeight: 64,
+  avatarCardContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
+    gap: 16,
+    paddingVertical: 4,
   },
-  photo: { width: 52, height: 52, borderRadius: 26 },
-  photoText: { color: theme.colors.primary, fontWeight: "700", fontSize: 14 },
+  avatarWrapper: {
+    position: "relative",
+  },
+  avatarImage: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  avatarPlaceholder: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: theme.colors.primaryLight,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+  },
+  cameraBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
+  avatarActions: {
+    flex: 1,
+    gap: 8,
+  },
+  changePhotoBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: "#f1f5f9",
+    alignSelf: "flex-start",
+  },
+  changePhotoBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.text,
+  },
+  savePhotoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    alignSelf: "flex-start",
+  },
+  savePhotoBtnDisabled: {
+    opacity: 0.6,
+  },
+  savePhotoBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  savedBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  savedBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#16a34a",
+  },
   field: {
     gap: 6,
   },

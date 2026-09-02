@@ -1,10 +1,9 @@
 import { Redirect, Stack, useSegments } from "expo-router";
-import React from "react";
+import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ScreenWrapper } from "@/components/ScreenWrapper";
 
 export default function RootLayout() {
   return (
@@ -13,7 +12,7 @@ export default function RootLayout() {
         <UserProvider>
           <StatusBar style="dark" />
           <AuthGate>
-            <ScreenWrapper>
+            <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
               <Stack
                 screenOptions={{
                   headerShown: false,
@@ -30,6 +29,7 @@ export default function RootLayout() {
                   name="apply-job"
                   options={{ presentation: "modal" }}
                 />
+                <Stack.Screen name="favorites" />
                 <Stack.Screen name="applications" />
                 <Stack.Screen name="direct-offers" />
                 <Stack.Screen name="chat-thread" />
@@ -46,7 +46,7 @@ export default function RootLayout() {
                 <Stack.Screen name="payment" />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               </Stack>
-            </ScreenWrapper>
+            </View>
           </AuthGate>
         </UserProvider>
       </LanguageProvider>

@@ -67,7 +67,7 @@ const SeekerDashboard: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
         contentContainerStyle={[
@@ -76,7 +76,7 @@ const SeekerDashboard: React.FC = () => {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header: Seeker Snippet + Notifications */}
+        {/* Top Header: Seeker Snippet + Shortcuts */}
         <View style={styles.topHeader}>
           <TouchableOpacity
             style={styles.profileSnippet}
@@ -114,26 +114,35 @@ const SeekerDashboard: React.FC = () => {
 
           <TouchableOpacity
             style={styles.notifBtn}
+            onPress={() => router.push("/favorites")}
+            activeOpacity={0.8}
+          >
+            <Bookmark
+              size={20}
+              color={theme.colors.primary}
+              fill={savedJobIds.length > 0 ? theme.colors.primary : "transparent"}
+            />
+            {savedJobIds.length > 0 && (
+              <View style={styles.savedCountBadge}>
+                <Text style={styles.savedCountText}>{savedJobIds.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.notifBtn}
             onPress={() => router.push("/notifications")}
             activeOpacity={0.8}
           >
-            <Bell size={22} color={theme.colors.text} />
+            <Bell size={20} color={theme.colors.text} />
             {unreadNotifs > 0 && (
               <View style={styles.notifBadge}>
                 <Text style={styles.notifBadgeText}>{unreadNotifs}</Text>
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.notifBtn}
-            onPress={() => router.push("/post-job")}
-            activeOpacity={0.8}
-          >
-            <Briefcase size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
         </View>
 
-        
         <TouchableOpacity
           style={styles.searchBar}
           onPress={() => router.push("/(tabs)/search")}
@@ -148,7 +157,6 @@ const SeekerDashboard: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-       
         <View style={styles.statsGrid}>
           <TouchableOpacity
             style={styles.statCard}
@@ -203,18 +211,24 @@ const SeekerDashboard: React.FC = () => {
             <Text style={styles.statLabel}>{t.home.statOffers}</Text>
           </TouchableOpacity>
 
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => router.push("/favorites")}
+            activeOpacity={0.8}
+          >
             <View
               style={[
                 styles.statIconWrap,
-                { backgroundColor: theme.colors.infoLight },
+                { backgroundColor: "#fef3c7" },
               ]}
             >
-              <Eye size={20} color={theme.colors.info} />
+              <Bookmark size={20} color="#d97706" fill="#d97706" />
             </View>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>{t.home.statViews}</Text>
-          </View>
+            <Text style={styles.statNumber}>{savedJobIds.length}</Text>
+            <Text style={styles.statLabel}>
+              {language === "EN" ? "Saved" : "Favoris"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         
@@ -411,7 +425,7 @@ const SeekerDashboard: React.FC = () => {
 
         <View style={{ height: 24 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -518,6 +532,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   notifBadgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: "#ffffff",
+  },
+  savedCountBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  savedCountText: {
     fontSize: 9,
     fontWeight: "900",
     color: "#ffffff",

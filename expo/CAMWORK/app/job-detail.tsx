@@ -81,7 +81,7 @@ export default function JobDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       {/* Top Navbar */}
       <View style={styles.navBar}>
@@ -297,7 +297,7 @@ export default function JobDetailScreen() {
           {!isAlreadyApplied && <ArrowRight size={20} color="#ffffff" />}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

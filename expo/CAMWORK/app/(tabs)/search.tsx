@@ -107,12 +107,28 @@ export default function SearchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
         {/* Top Header */}
         <View style={styles.header}>
           <Text style={styles.title}>{t.search.title}</Text>
+          <TouchableOpacity
+            style={styles.favShortcutBtn}
+            onPress={() => router.push("/favorites")}
+            activeOpacity={0.8}
+          >
+            <Bookmark
+              size={20}
+              color={theme.colors.primary}
+              fill={savedJobIds.length > 0 ? theme.colors.primary : "transparent"}
+            />
+            {savedJobIds.length > 0 && (
+              <View style={styles.favBadge}>
+                <Text style={styles.favBadgeText}>{savedJobIds.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Search Bar & Filter Toggle */}
@@ -150,6 +166,35 @@ export default function SearchScreen() {
               </View>
             )}
           </TouchableOpacity>
+        </View>
+
+        {/* Category Horizontal Filter Pills */}
+        <View style={{ marginBottom: 4 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickPillsScroll}
+          >
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.quickPill,
+                  selectedCategory === cat && styles.quickPillActive,
+                ]}
+                onPress={() => setSelectedCategory(cat)}
+              >
+                <Text
+                  style={[
+                    styles.quickPillText,
+                    selectedCategory === cat && styles.quickPillTextActive,
+                  ]}
+                >
+                  {cat === "All" ? t.common.all : cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Results Header Count */}
@@ -419,14 +464,47 @@ export default function SearchScreen() {
           </View>
         </Modal>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { flex: 1, paddingHorizontal: 18, paddingTop: 4 },
-  header: { marginBottom: 8 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  favShortcutBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    position: "relative",
+  },
+  favBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  favBadgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: "#ffffff",
+  },
   title: {
     fontSize: 24,
     fontWeight: "900",

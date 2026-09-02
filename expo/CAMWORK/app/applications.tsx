@@ -93,7 +93,7 @@ export default function ApplicationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       {/* Top Navbar */}
       <View style={styles.navBar}>
@@ -230,7 +230,7 @@ export default function ApplicationsScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

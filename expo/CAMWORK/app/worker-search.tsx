@@ -14,11 +14,13 @@ import { ArrowLeft, Search, Send, UserRound } from "lucide-react-native";
 import { searchWorkersApi, createDirectOfferApi } from "@/components/api";
 import { useUser } from "@/context/UserContext";
 import { theme } from "@/components/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Worker = { id: number; name: string; email: string };
 
 export default function WorkerSearchScreen() {
   const { user, jobs } = useUser();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,7 +79,7 @@ export default function WorkerSearchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={22} color={theme.colors.text} />
@@ -99,13 +101,16 @@ export default function WorkerSearchScreen() {
       <FlatList
         data={workers}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={[styles.list, { paddingBottom: 66 }]}
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: 24 + insets.bottom },
+        ]}
         refreshing={loading}
         onRefresh={search}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.avatar}>
-              <UserRound size={21} color={theme.colors.primary} />
+              <UserRound size={20} color={theme.colors.primary} />
             </View>
             <TouchableOpacity
               style={styles.body}
@@ -126,7 +131,7 @@ export default function WorkerSearchScreen() {
             <TouchableOpacity
               style={styles.offer}
               onPress={() => offerJob(item)}
-              accessibilityLabel={`Offer a job to ${item.name}`}
+              accessibilityLabel={`Direct offer to ${item.name}`}
             >
               <Send size={17} color="#fff" />
             </TouchableOpacity>
@@ -138,7 +143,7 @@ export default function WorkerSearchScreen() {
           </Text>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

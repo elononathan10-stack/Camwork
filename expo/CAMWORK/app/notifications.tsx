@@ -23,6 +23,7 @@ import {
 import { theme } from "@/components/theme";
 import { useUser, NotificationItem } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type NotifTab = "all" | "jobs" | "messages" | "system";
 
@@ -30,6 +31,7 @@ export default function NotificationsScreen() {
   const { notifications, markNotificationRead, markAllNotificationsRead } =
     useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<NotifTab>("all");
 
@@ -85,7 +87,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       {/* Top Navbar */}
       <View style={styles.navBar}>
@@ -126,7 +128,10 @@ export default function NotificationsScreen() {
       <FlatList
         data={filteredNotifs}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 24 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -159,7 +164,7 @@ export default function NotificationsScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

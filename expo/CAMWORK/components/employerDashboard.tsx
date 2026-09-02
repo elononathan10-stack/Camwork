@@ -76,7 +76,7 @@ export default function EmployerDashboard() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
         data={workers}
         keyExtractor={(item) => String(item.id)}
@@ -196,7 +196,7 @@ export default function EmployerDashboard() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
