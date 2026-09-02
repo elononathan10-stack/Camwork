@@ -984,6 +984,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     const next = [...skills, newSkill];
     setSkills(next);
     try {
+      await updateUserProfileApi({ skills: next.map((skill) => skill.name) });
       await AsyncStorage.setItem("camwork_skills", JSON.stringify(next));
     } catch (e) {
       console.error("Error saving skills:", e);
@@ -994,6 +995,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     const next = skills.filter((s) => s.id !== skillId);
     setSkills(next);
     try {
+      await updateUserProfileApi({ skills: next.map((skill) => skill.name) });
       await AsyncStorage.setItem("camwork_skills", JSON.stringify(next));
     } catch (e) {
       console.error("Error deleting skill:", e);
