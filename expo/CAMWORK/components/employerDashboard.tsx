@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import {
-  BriefcaseBusiness,
   CreditCard,
   Plus,
   UserRound,
@@ -17,18 +16,38 @@ import {
 } from "lucide-react-native";
 import { router } from "expo-router";
 import { theme } from "./theme";
+import { searchWorkersApi } from "./api";
 import { useUser } from "@/context/UserContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+type Worker = {
+  id: number | string;
+  name: string;
+  email: string;
+  skills?: string[];
+};
 
 export default function EmployerDashboard() {
   const { user, jobs, applications, updateApplicationStatus } = useUser();
   const insets = useSafeAreaInsets();
+  const [workers, setWorkers] = React.useState<Worker[]>([]);
+  const [workersLoading, setWorkersLoading] = React.useState(false);
   const ownJobs = jobs.filter(
     (job) => job.postedBy === user?.email && !job.isServiceRequest,
   );
   const employerApplications = applications.filter((application) =>
     ownJobs.some((job) => job.id === application.jobId),
   );
+
+  React.useEffect(() => {
+    if (user?.role !== "employer") return;
+    setWorkersLoading(true);
+    searchWorkersApi("")
+      .then(setWorkers)
+      .catch(() => setWorkers([]))
+      .finally(() => setWorkersLoading(false));
+  }, [user?.role]);
+
   const actions = [
     {
       id: "post",
@@ -43,6 +62,12 @@ export default function EmployerDashboard() {
       onPress: () => router.push("/payment"),
     },
     {
+      id: "workers",
+      label: "Find workers",
+      icon: UserRound,
+      onPress: () => router.push("/worker-search"),
+    },
+    {
       id: "profile",
       label: "Company profile",
       icon: UserRound,
@@ -53,8 +78,8 @@ export default function EmployerDashboard() {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={ownJobs}
-        keyExtractor={(item) => item.id}
+        data={workers}
+        keyExtractor={(item) => String(item.id)}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 36 + insets.bottom },
@@ -66,7 +91,7 @@ export default function EmployerDashboard() {
                 <Text style={styles.eyebrow}>Employer workspace</Text>
                 <Text style={styles.title}>{user?.name || "Your company"}</Text>
                 <Text style={styles.subtitle}>
-                  Manage offers, applicants, and protected payments.
+                  Find registered employees and review their available skills.
                 </Text>
               </View>
               <TouchableOpacity
@@ -95,24 +120,19 @@ export default function EmployerDashboard() {
                 );
               }}
             />
-            <Text style={styles.sectionTitle}>Your job offers</Text>
+            <Text style={styles.sectionTitle}>Employees and skills</Text>
             {employerApplications.length > 0 && (
               <View>
                 <Text style={styles.sectionTitle}>Applicant review</Text>
                 {employerApplications.map((application) => (
                   <View key={application.id} style={styles.applicationCard}>
-                    <View style={styles.applicationBody}>
-                      <Text style={styles.jobTitle}>
+                    <View style={styles.body}>
+                      <Text style={styles.workerName}>
                         {application.jobTitle}
                       </Text>
-                      <Text style={styles.jobMeta}>
+                      <Text style={styles.meta}>
                         {application.companyName} · {application.status}
                       </Text>
-                      {!!application.coverNote && (
-                        <Text style={styles.jobDescription} numberOfLines={2}>
-                          {application.coverNote}
-                        </Text>
-                      )}
                     </View>
                     {application.status === "Pending" && (
                       <View style={styles.applicationActions}>
@@ -146,34 +166,32 @@ export default function EmployerDashboard() {
           </>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.jobCard}
-            onPress={() =>
-              router.push({ pathname: "/job-detail", params: { id: item.id } })
-            }
-          >
-            <View style={styles.jobIcon}>
-              <BriefcaseBusiness size={20} color={theme.colors.primary} />
+          <View style={styles.workerCard}>
+            <View style={styles.workerIcon}>
+              <UserRound size={20} color={theme.colors.primary} />
             </View>
-            <View style={styles.jobBody}>
-              <Text style={styles.jobTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.jobMeta}>
-                {item.location} · {item.postedTime}
-              </Text>
-              <Text style={styles.jobDescription} numberOfLines={2}>
-                {item.description}
+            <View style={styles.body}>
+              <Text style={styles.workerName}>{item.name}</Text>
+              <Text style={styles.meta}>{item.email}</Text>
+              <Text style={styles.skills}>
+                {item.skills?.length
+                  ? item.skills.join(", ")
+                  : "Skills not provided"}
               </Text>
             </View>
-          </TouchableOpacity>
+          </View>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <BriefcaseBusiness size={40} color="#94a3b8" />
-            <Text style={styles.emptyTitle}>No job offers yet</Text>
+            <UserRound size={40} color="#94a3b8" />
+            <Text style={styles.emptyTitle}>
+              {workersLoading
+                ? "Loading employees..."
+                : "No employee profiles found"}
+            </Text>
             <Text style={styles.emptyText}>
-              Create your first offer to start building your hiring reputation.
+              Only registered seeker accounts appear here. No sample employees
+              are shown.
             </Text>
           </View>
         }
@@ -184,7 +202,7 @@ export default function EmployerDashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: 18, paddingBottom: 36 },
+  content: { padding: 18 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -225,19 +243,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dbe3ed",
   },
-  actionText: {
-    color: theme.colors.text,
-    fontSize: 12,
-    fontWeight: "800",
-    flexShrink: 1,
-  },
+  actionText: { color: theme.colors.text, fontSize: 12, fontWeight: "800" },
   sectionTitle: {
     color: theme.colors.text,
     fontSize: 18,
     fontWeight: "900",
     marginBottom: 10,
   },
-  jobCard: {
+  workerCard: {
     flexDirection: "row",
     gap: 12,
     padding: 14,
@@ -258,7 +271,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
-  applicationBody: { flex: 1 },
+  workerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primaryLight,
+  },
+  body: { flex: 1 },
+  workerName: { color: theme.colors.text, fontSize: 15, fontWeight: "800" },
+  meta: { color: theme.colors.primary, fontSize: 12, marginTop: 3 },
+  skills: { color: "#64748b", fontSize: 12, marginTop: 6 },
   applicationActions: { flexDirection: "row", gap: 8 },
   reviewButton: {
     width: 40,
@@ -267,23 +291,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 10,
     backgroundColor: "#f8fafc",
-  },
-  jobIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primaryLight,
-  },
-  jobBody: { flex: 1 },
-  jobTitle: { color: theme.colors.text, fontSize: 15, fontWeight: "800" },
-  jobMeta: { color: theme.colors.primary, fontSize: 12, marginTop: 3 },
-  jobDescription: {
-    color: "#64748b",
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 6,
   },
   empty: { alignItems: "center", paddingVertical: 70, paddingHorizontal: 24 },
   emptyTitle: {

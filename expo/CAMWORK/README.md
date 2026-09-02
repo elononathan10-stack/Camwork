@@ -16,6 +16,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+### Run on a physical phone
+
+Run commands from `expo/CAMWORK`, install Expo Go for SDK 54, and scan the QR code shown by Expo. Keep the phone and computer on the same Wi-Fi network:
+
+```bash
+npm run start:lan
+```
+
+If the network blocks local discovery, use the tunnel mode:
+
+```bash
+npm run start:tunnel
+```
+
+Start the backend separately from `expo/CAMWORK/Camwork-Backend`. The backend already listens on `0.0.0.0:3000`, and the app derives the computer's LAN address from Expo's host URI. Windows Firewall must allow Node.js on private networks. The message `No apps connected` means the development server has no Expo Go or development-build client connected yet; scan the QR code or press `w` for web.
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

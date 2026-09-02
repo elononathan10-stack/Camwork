@@ -37,7 +37,7 @@ type TabFilter =
   | "Rejected";
 
 export default function ApplicationsScreen() {
-  const { applications } = useUser();
+  const { applications, validateApplication } = useUser();
   const { language, t } = useLanguage();
   const insets = useSafeAreaInsets();
 
@@ -209,6 +209,15 @@ export default function ApplicationsScreen() {
                     {t.applications.contactEmployer}
                   </Text>
                 </TouchableOpacity>
+                {item.status === "Accepted" && !item.seekerValidated && (
+                  <TouchableOpacity
+                    style={styles.validateBtn}
+                    onPress={() => validateApplication(item.id, true)}
+                  >
+                    <CheckCircle2 size={14} color="#fff" />
+                    <Text style={styles.validateText}>Validate employment</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           );
@@ -406,6 +415,16 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "center",
   },
+  validateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  validateText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",

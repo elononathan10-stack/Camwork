@@ -266,6 +266,9 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     gap: 14,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
   },
   bannerCard: {
     flexDirection: "row",
@@ -331,6 +334,7 @@ const styles = StyleSheet.create({
   },
   vouchHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "flex-start",
     gap: 12,
   },
@@ -349,6 +353,7 @@ const styles = StyleSheet.create({
   },
   endorserInfo: {
     flex: 1,
+    minWidth: 180,
     gap: 2,
   },
   nameRow: {

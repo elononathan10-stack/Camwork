@@ -36,7 +36,14 @@ export default function PostJobScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { user, jobs, createJob, updateJob } = useUser();
   const insets = useSafeAreaInsets();
-  const existingJob = id ? jobs.find((job) => job.id === id) : undefined;
+  const existingJob = id
+    ? jobs.find(
+        (job) =>
+          job.id === id &&
+          job.postedBy?.trim().toLowerCase() ===
+            user?.email?.trim().toLowerCase(),
+      )
+    : undefined;
   const isEditing = Boolean(existingJob);
   const isServiceRequest = user?.role === "seeker";
   const [title, setTitle] = useState(existingJob?.title || "");

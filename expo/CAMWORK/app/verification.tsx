@@ -319,6 +319,9 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 16,
     paddingBottom: 36,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
   },
   trustBanner: {
     flexDirection: "row",
@@ -348,6 +351,7 @@ const styles = StyleSheet.create({
   },
   docCardTop: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "flex-start",
     gap: 12,
   },
@@ -361,6 +365,7 @@ const styles = StyleSheet.create({
   },
   docInfo: {
     flex: 1,
+    minWidth: 180,
     gap: 3,
   },
   docTitle: {

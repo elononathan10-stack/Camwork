@@ -321,6 +321,9 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
     paddingBottom: 36,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
   },
   sectionCard: {
     backgroundColor: "#ffffff",

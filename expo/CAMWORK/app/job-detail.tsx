@@ -29,6 +29,7 @@ import {
 import { theme } from "@/components/theme";
 import { useUser } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,10 +43,13 @@ export default function JobDetailScreen() {
     startConversation,
   } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const job = jobs.find((j) => j.id === id) || jobs[0];
   const isSaved = savedJobIds.includes(job.id);
   const isAlreadyApplied = applications.some((a) => a.jobId === job.id);
+  const isOwner =
+    user?.email?.trim().toLowerCase() === job.postedBy?.trim().toLowerCase();
 
   const seekerSkillNames = skills.map((s) => s.name.toLowerCase());
 
@@ -61,7 +65,7 @@ export default function JobDetailScreen() {
 
   const handleApplyPress = () => {
     if (user?.role === "employer") {
-      startConversation(job.company, job.company, job.title).then(
+      startConversation(job.company, job.company, job.title, job.postedBy).then(
         (conversationId) =>
           router.push({
             pathname: "/chat-thread",
@@ -109,7 +113,10 @@ export default function JobDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 110 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header Hero Card */}
@@ -259,21 +266,33 @@ export default function JobDetailScreen() {
 
       {/* Floating Action Footer */}
       <View style={styles.floatingFooter}>
+        {isOwner && (
+          <TouchableOpacity
+            style={styles.editPostButton}
+            onPress={() =>
+              router.push({ pathname: "/post-job", params: { id: job.id } })
+            }
+          >
+            <Text style={styles.editPostText}>Edit post</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[
             styles.applyMainBtn,
             isAlreadyApplied && styles.applyMainBtnDisabled,
           ]}
           onPress={handleApplyPress}
-          disabled={isAlreadyApplied}
+          disabled={isAlreadyApplied || isOwner}
           activeOpacity={0.9}
         >
           <Text style={styles.applyMainBtnText}>
-            {user?.role === "employer"
-              ? "Contact service seeker"
-              : isAlreadyApplied
-                ? t.jobDetail.appliedAlready
-                : t.jobDetail.applyNow}
+            {isOwner
+              ? "Your job post"
+              : user?.role === "employer"
+                ? "Contact service seeker"
+                : isAlreadyApplied
+                  ? t.jobDetail.appliedAlready
+                  : t.jobDetail.applyNow}
           </Text>
           {!isAlreadyApplied && <ArrowRight size={20} color="#ffffff" />}
         </TouchableOpacity>
@@ -531,6 +550,17 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
+  editPostButton: {
+    minHeight: 48,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: "#fff",
+  },
+  editPostText: { color: theme.colors.primary, fontWeight: "800" },
   applyMainBtn: {
     backgroundColor: theme.colors.primary,
     height: 54,

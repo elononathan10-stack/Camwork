@@ -124,7 +124,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   spacer: { width: 40 },
-  content: { padding: 18, gap: 10 },
+  content: {
+    padding: 18,
+    gap: 10,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
+  },
   intro: {
     flexDirection: "row",
     gap: 10,

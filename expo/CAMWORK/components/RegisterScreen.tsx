@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { registerUser, loginUser } from "./api";
+import { registerUser } from "./api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
 import {
@@ -113,14 +114,8 @@ const RegisterScreen = () => {
         role,
       });
 
-      // 2. Attempt login to acquire JWT token and establish session
-      try {
-        await loginUser({
-          email: email.trim(),
-          password,
-        });
-      } catch {
-        // Continue if login token caching is handled
+      if (regResponse.token) {
+        await AsyncStorage.setItem("camwork_token", regResponse.token);
       }
 
       await setUser({

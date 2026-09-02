@@ -16,7 +16,9 @@ export interface LoginResponse {
   token: string;
 }
 
-export interface RegisterResponse extends BackendUser {}
+export interface RegisterResponse extends BackendUser {
+  token?: string;
+}
 
 export const getApiBaseUrl = (): string => {
   // 1. Explicit environment variable if configured
@@ -211,13 +213,10 @@ export const createPayment = async (payload: {
   method: "mobile-money" | "card";
   applicationId?: string;
 }) => {
-  const baseUrl = getApiBaseUrl();
-  const response = await fetch(`${baseUrl}/api/payments`, {
+  return authenticatedRequest("/api/payments", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return handleApiResponse(response);
 };
 
 const authenticatedRequest = async (
@@ -315,6 +314,12 @@ export const uploadVerificationDocumentApi = async (payload: {
 
 export const searchWorkersApi = async (query: string) =>
   authenticatedRequest(`/api/user/workers?q=${encodeURIComponent(query)}`);
+
+export const updateUserProfileApi = async (profile: object) =>
+  authenticatedRequest("/api/user/profile", {
+    method: "PATCH",
+    body: JSON.stringify(profile),
+  });
 
 export const createDirectOfferApi = async (payload: object) =>
   authenticatedRequest("/api/direct-offers", {

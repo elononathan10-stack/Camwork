@@ -252,6 +252,9 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     gap: 14,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
   },
   bannerCard: {
     flexDirection: "row",
@@ -299,6 +302,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 12,
   },
@@ -317,6 +321,7 @@ const styles = StyleSheet.create({
   },
   companyInfo: {
     flex: 1,
+    minWidth: 150,
     gap: 2,
   },
   nameRow: {
@@ -380,6 +385,7 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     paddingTop: 8,
     borderTopWidth: 1,

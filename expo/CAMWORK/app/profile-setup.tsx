@@ -178,6 +178,8 @@ export default function ProfileSetupWizard() {
           {/* Step Content */}
           <ScrollView
             contentContainerStyle={styles.scrollBody}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
             {/* STEP 1: Avatar & Professional Headline */}
@@ -518,6 +520,9 @@ const styles = StyleSheet.create({
   },
   scrollBody: {
     paddingVertical: 12,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
   },
   stepContainer: {
     gap: 20,

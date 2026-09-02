@@ -25,6 +25,12 @@ const User = sequelize.define("User", {
     defaultValue: "USER",
     allowNull: true,
   },
+  avatar: { type: DataTypes.TEXT, allowNull: true },
+  headline: { type: DataTypes.STRING, allowNull: true },
+  bio: { type: DataTypes.TEXT, allowNull: true },
+  location: { type: DataTypes.STRING, allowNull: true },
+  expectedRate: { type: DataTypes.STRING, allowNull: true },
+  skills: { type: DataTypes.TEXT, allowNull: true },
   resetToken: {
     type: DataTypes.STRING,
     allowNull: true,

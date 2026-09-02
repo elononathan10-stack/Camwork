@@ -158,6 +158,7 @@ export default function ChatThreadScreen() {
           data={conversation.messages}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             const isMe = item.isMe;

@@ -24,7 +24,7 @@ import { useUser } from "@/context/UserContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function PaymentScreen() {
-  const { user } = useUser();
+  const { user, applications } = useUser();
   const insets = useSafeAreaInsets();
   const [method, setMethod] = useState<"mobile-money" | "card">("mobile-money");
   const [enabled, setEnabled] = useState(false);
@@ -44,7 +44,14 @@ export default function PaymentScreen() {
     }
     setStatus("processing");
     try {
-      await createPayment({ payerEmail: user.email, amount, method });
+      await createPayment({
+        payerEmail: user.email,
+        amount,
+        method,
+        applicationId: applications.find(
+          (application) => application.status === "Accepted",
+        )?.id,
+      });
       setStatus("paid");
     } catch (error) {
       setStatus("idle");
@@ -139,7 +146,7 @@ export default function PaymentScreen() {
                 ? "Processing..."
                 : status === "paid"
                   ? "Payment simulated"
-                  : "Simulate payment"}
+                  : "Make payment"}
             </Text>
           </TouchableOpacity>
           {status === "paid" && (

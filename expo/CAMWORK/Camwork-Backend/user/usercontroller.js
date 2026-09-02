@@ -2,19 +2,109 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import User from "./usermodel.js";
+import { requireAuth } from "../middleware/auth.js";
+import { Op } from "sequelize";
+import { hasMeaningfulText } from "../middleware/validation.js";
+
+const publicUser = (user) => {
+  const { password, resetToken, resetTokenExpires, ...safeUser } =
+    typeof user.toJSON === "function" ? user.toJSON() : user;
+  return safeUser;
+};
 
 const restrictedContactPattern =
   /(?:\+?\d[\d\s().-]{6,}\d|\b\d{7,}\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b(?:meet|meeting|address|location|come to|whatsapp|telegram|phone|call me|text me|contact me)\b)/i;
 
 export const checkContent = (req, res) => {
   const content = String(req.body?.content || "");
-  if (restrictedContactPattern.test(content)) {
+  if (restrictedContactPattern.test(content) || !hasMeaningfulText(content)) {
     return res.status(422).json({
       allowed: false,
-      error: "Contact details and meeting arrangements must stay on CamWork.",
+      error: "Please enter meaningful content without contact details.",
     });
   }
   return res.status(200).json({ allowed: true });
+};
+
+export const searchWorkers = async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  const where = { role: "seeker" };
+  if (query) where.name = { [Op.like]: `%${query}%` };
+  const workers = await User.findAll({
+    where,
+    attributes: [
+      "id",
+      "name",
+      "email",
+      "role",
+      "avatar",
+      "headline",
+      "bio",
+      "location",
+      "expectedRate",
+      "skills",
+    ],
+  });
+  return res.json(
+    workers.map((worker) => ({
+      ...publicUser(worker),
+      skills: worker.skills ? JSON.parse(worker.skills) : [],
+    })),
+  );
+};
+
+export const updateProfile = async (req, res) => {
+  const allowed = [
+    "name",
+    "avatar",
+    "headline",
+    "bio",
+    "location",
+    "expectedRate",
+    "skills",
+  ];
+  const updates = Object.fromEntries(
+    Object.entries(req.body || {}).filter(([key]) => allowed.includes(key)),
+  );
+  if (updates.skills) updates.skills = JSON.stringify(updates.skills);
+  const user = await User.findOne({ where: { email: req.auth.email } });
+  if (!user) return res.status(404).json({ error: "Account not found." });
+  await user.update(updates);
+  const profile = publicUser(user);
+  return res.json({
+    ...profile,
+    skills: profile.skills ? JSON.parse(profile.skills) : [],
+  });
+};
+
+export const submitVerificationDocument = async (req, res) => {
+  const { documentType, fileName, mimeType, data } = req.body;
+  if (!documentType || !fileName || !mimeType || !data)
+    return res.status(400).json({
+      error: "documentType, fileName, mimeType, and data are required.",
+    });
+  const payload = { documentType, fileName, mimeType, data };
+  let providerStatus = "pending_manual_review";
+  if (process.env.KYC_API_URL) {
+    const response = await fetch(process.env.KYC_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.KYC_API_KEY
+          ? { Authorization: `Bearer ${process.env.KYC_API_KEY}` }
+          : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok)
+      return res
+        .status(502)
+        .json({ error: "KYC provider rejected the document." });
+    providerStatus = "submitted_to_kyc";
+  }
+  return res
+    .status(202)
+    .json({ status: providerStatus, documentType, fileName });
 };
 
 export const register = async (req, res) => {
@@ -41,7 +131,13 @@ export const register = async (req, res) => {
       role: role || "USER",
     });
 
-    res.status(201).json(newUser);
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email },
+      process.env.JWT_SECRET || "camwork-secret",
+      { expiresIn: "6h" },
+    );
+
+    res.status(201).json({ ...publicUser(newUser), token });
   } catch (error) {
     console.error("Error registering user:", error);
     res.status(500).json({ error: "Failed to register user" });
@@ -82,7 +178,7 @@ export const login = async (req, res) => {
       { expiresIn: "6h" },
     );
 
-    res.status(200).json({ user, token });
+    res.status(200).json({ user: publicUser(user), token });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });

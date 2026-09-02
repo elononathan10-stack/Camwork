@@ -4,6 +4,10 @@ dotenv.config();
 import { connectToDatabase } from "./dbconnect.js";
 import userrouter from "./user/userroute.js";
 import paymentrouter from "./payment/paymentroute.js";
+import jobrouter from "./job/jobroute.js";
+import applicationrouter from "./application/applicationroute.js";
+import messagerouter from "./message/messageroute.js";
+import directOfferRouter from "./directOffer/directOfferroute.js";
 import { sequelize } from "./dbconnect.js";
 const app = express();
 
@@ -20,9 +24,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 app.use("/api/user", userrouter);
 app.use("/api/payments", paymentrouter);
+app.use("/api/jobs", jobrouter);
+app.use("/api/applications", applicationrouter);
+app.use("/api/messages", messagerouter);
+app.use("/api/direct-offers", directOfferRouter);
 
 app.get("/api/health", (req, res) => {
   res
@@ -30,10 +38,18 @@ app.get("/api/health", (req, res) => {
     .json({ status: "ok", message: "CamWork backend API is active" });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT || 3000);
 
-app.listen(PORT, async () => {
+const start = async () => {
   await connectToDatabase();
-  await sequelize.sync({ force: false, alter: true });
-  console.log(`Server is running on port ${PORT}`);
+  // Do not use force here: it would delete production data.
+  await sequelize.sync({ alter: process.env.DB_SYNC_ALTER === "true" });
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`CamWork API listening on port ${PORT}`);
+  });
+};
+
+start().catch((error) => {
+  console.error("CamWork API could not start:", error);
+  process.exit(1);
 });

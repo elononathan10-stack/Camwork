@@ -17,6 +17,7 @@ import {
   createConversation,
   sendMessage,
   updateJob as updateJobApi,
+  updateUserProfileApi,
 } from "@/components/api";
 
 export interface SkillItem {
@@ -786,8 +787,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const loadState = async () => {
       try {
+        const token = await AsyncStorage.getItem("camwork_token");
         const savedUser = await AsyncStorage.getItem("camwork_user");
-        if (savedUser) {
+        if (savedUser && token) {
           const savedProfile = JSON.parse(savedUser) as SeekerProfile;
           // Removes the old development account that was previously persisted
           // on every test device. New installs always start with empty fields.
@@ -805,6 +807,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
               "elononathan10@gmail.com"
           )
             await restoreAccountSnapshot(savedProfile.email);
+        } else if (savedUser || !token) {
+          await AsyncStorage.removeItem("camwork_user");
         }
         setJobs(INITIAL_JOBS);
       } catch (error) {
@@ -842,42 +846,51 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (isLoading || !user?.email) return;
-    getApplications(user.role)
-      .then(setApplications)
-      .catch(async (error) => {
-        if (!(await clearExpiredSession(error))) {
-          console.error("Failed to load shared applications:", error);
-        }
-      });
+    AsyncStorage.getItem("camwork_token").then((token) => {
+      if (!token) return;
+      getApplications(user.role)
+        .then(setApplications)
+        .catch(async (error) => {
+          if (!(await clearExpiredSession(error))) {
+            setApplications([]);
+          }
+        });
+    });
   }, [isLoading, user?.email, user?.role]);
 
   useEffect(() => {
     if (isLoading || !user?.email) return;
-    getConversations()
-      .then((remoteConversations) => {
-        if (remoteConversations.length > 0)
-          setConversations(remoteConversations);
-      })
-      .catch((error) =>
-        clearExpiredSession(error).then((wasExpired) => {
-          if (!wasExpired)
-            console.error("Failed to load shared conversations:", error);
-        }),
-      );
+    AsyncStorage.getItem("camwork_token").then((token) => {
+      if (!token) return;
+      getConversations()
+        .then((remoteConversations) => {
+          if (remoteConversations.length > 0)
+            setConversations(remoteConversations);
+        })
+        .catch((error) =>
+          clearExpiredSession(error).then((wasExpired) => {
+            if (!wasExpired)
+              console.error("Failed to load shared conversations:", error);
+          }),
+        );
+    });
   }, [isLoading, user?.email]);
 
   useEffect(() => {
     if (isLoading || !user?.email) return;
-    getDirectOffersApi(user.role)
-      .then((remoteOffers) => {
-        if (remoteOffers.length > 0) setDirectOffers(remoteOffers);
-      })
-      .catch((error) =>
-        clearExpiredSession(error).then((wasExpired) => {
-          if (!wasExpired)
-            console.error("Failed to load direct offers:", error);
-        }),
-      );
+    AsyncStorage.getItem("camwork_token").then((token) => {
+      if (!token) return;
+      getDirectOffersApi(user.role)
+        .then((remoteOffers) => {
+          if (remoteOffers.length > 0) setDirectOffers(remoteOffers);
+        })
+        .catch((error) =>
+          clearExpiredSession(error).then((wasExpired) => {
+            if (!wasExpired)
+              console.error("Failed to load direct offers:", error);
+          }),
+        );
+    });
   }, [isLoading, user?.email, user?.role]);
 
   const setUser = async (userData: Partial<SeekerProfile>) => {
@@ -899,6 +912,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     const updated = { ...user, ...updates };
     setUserState(updated);
     try {
+      const savedProfile = await updateUserProfileApi(updates);
+      setUserState({ ...updated, ...savedProfile });
       await AsyncStorage.setItem("camwork_user", JSON.stringify(updated));
     } catch (e) {
       console.error("Error updating profile:", e);

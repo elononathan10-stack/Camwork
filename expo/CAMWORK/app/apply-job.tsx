@@ -31,7 +31,7 @@ import ApplicationConfirmation from "@/components/ApplicationConfirmation";
 
 export default function ApplyJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { jobs, user, applyToJob } = useUser();
+  const { jobs, user, applyToJob, startConversation } = useUser();
   const { language, t } = useLanguage();
 
   const job = jobs.find((j) => j.id === id) || jobs[0];
@@ -45,14 +45,28 @@ export default function ApplyJobScreen() {
     // Simulate submission latency
     await new Promise((res) => setTimeout(res, 600));
 
-    await applyToJob(job, coverNote);
-    setIsSubmitting(false);
-    setIsConfirmationVisible(true);
+    try {
+      await applyToJob(job, coverNote);
+      setIsSubmitting(false);
+      setIsConfirmationVisible(true);
+    } catch (error) {
+      setIsSubmitting(false);
+      throw error;
+    }
   };
 
-  const handleCloseConfirmation = () => {
+  const handleCloseConfirmation = async () => {
     setIsConfirmationVisible(false);
-    router.replace("/applications");
+    const conversationId = await startConversation(
+      job.company,
+      job.company,
+      job.title,
+      job.postedBy,
+    );
+    router.replace({
+      pathname: "/chat-thread",
+      params: { id: conversationId },
+    });
   };
 
   const handleBrowseMore = () => {
@@ -83,6 +97,8 @@ export default function ApplyJobScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {/* Target Job Summary Card */}
           <View style={styles.jobSummaryCard}>
@@ -227,6 +243,9 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 16,
     paddingBottom: 80,
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
   },
   jobSummaryCard: {
     flexDirection: "row",

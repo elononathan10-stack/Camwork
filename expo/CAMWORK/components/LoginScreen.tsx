@@ -31,7 +31,7 @@ const LoginScreen = () => {
   const { setUser } = useUser();
   const { language, setLanguage, t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("elononathan10@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);

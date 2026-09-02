@@ -133,13 +133,13 @@ const SeekerDashboard: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Search Bar Shortcut */}
+        
         <TouchableOpacity
           style={styles.searchBar}
           onPress={() => router.push("/(tabs)/search")}
           activeOpacity={0.8}
         >
-          <Search size={20} color="#94a3b8" />
+          <Search size={20} color="#c7cdd7" />
           <Text style={styles.searchPlaceholder}>
             {t.home.searchPlaceholder}
           </Text>
@@ -148,7 +148,7 @@ const SeekerDashboard: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-        {/* Stats Grid (4 Cards) */}
+       
         <View style={styles.statsGrid}>
           <TouchableOpacity
             style={styles.statCard}
@@ -217,13 +217,13 @@ const SeekerDashboard: React.FC = () => {
           </View>
         </View>
 
-        {/* Priority Match Banner */}
+        
         {priorityJob && (
           <View style={styles.priorityMatchCard}>
             <View style={styles.priorityGlow} />
             <View style={styles.priorityHeader}>
               <View style={styles.priorityBadge}>
-                <Sparkles size={14} color="#ffffff" />
+                <Sparkles size={14} color="#f9f7f7" />
                 <Text style={styles.priorityBadgeText}>
                   {priorityJob.matchScore}% {t.home.priorityMatchBadge}
                 </Text>
@@ -234,7 +234,7 @@ const SeekerDashboard: React.FC = () => {
               >
                 <Bookmark
                   size={20}
-                  color="#ffffff"
+                  color="#faf5f5"
                   fill={
                     savedJobIds.includes(priorityJob.id)
                       ? "#ffffff"
@@ -276,7 +276,6 @@ const SeekerDashboard: React.FC = () => {
           </View>
         )}
 
-        {/* "My Applications" Preview Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t.home.myApplications}</Text>
@@ -365,7 +364,7 @@ const SeekerDashboard: React.FC = () => {
                     >
                       <Bookmark
                         size={20}
-                        color={isSaved ? theme.colors.primary : "#94a3b8"}
+                        color={isSaved ? theme.colors.primary : "#7f93b0"}
                         fill={isSaved ? theme.colors.primary : "transparent"}
                       />
                     </TouchableOpacity>
@@ -373,7 +372,7 @@ const SeekerDashboard: React.FC = () => {
 
                   <View style={styles.jobMetaRow}>
                     <View style={styles.metaItem}>
-                      <MapPin size={14} color="#64748b" />
+                      <MapPin size={14} color="#6d819d" />
                       <Text style={styles.metaText}>{job.location}</Text>
                     </View>
                     <View
@@ -605,8 +604,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
+  
   priorityGlow: {
     position: "absolute",
+    opacity: 1,
     top: -40,
     right: -40,
     width: 140,
