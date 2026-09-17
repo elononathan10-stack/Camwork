@@ -91,7 +91,15 @@ export default function PostJobScreen() {
   }, [existingJob]);
 
   const submit = async () => {
-    if (!title.trim() || !description.trim()) return;
+    if (!title.trim() || !description.trim()) {
+      Alert.alert(
+        isEn ? "Required fields" : "Champs requis",
+        isEn
+          ? "Add a job title and description before publishing."
+          : "Ajoutez un titre et une description avant de publier.",
+      );
+      return;
+    }
     setIsSaving(true);
     const job: CreateJobInput = {
       title: title.trim(),
@@ -380,7 +388,11 @@ export default function PostJobScreen() {
             <TextInput
               value={location}
               onChangeText={setLocation}
-              placeholder={isEn ? "e.g. Douala, Littoral or Remote" : "ex. Douala, Littoral ou Télétravail"}
+              placeholder={
+                isEn
+                  ? "e.g. Douala, Littoral or Remote"
+                  : "ex. Douala, Littoral ou Télétravail"
+              }
               placeholderTextColor="#94a3b8"
               style={styles.rowInput}
             />

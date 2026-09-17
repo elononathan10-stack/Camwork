@@ -22,7 +22,7 @@ export default function LanguageSelectScreen() {
   const { language, setLanguage, t } = useLanguage();
 
   const handleContinue = () => {
-    router.replace("/");
+    router.push("/");
   };
 
   return (

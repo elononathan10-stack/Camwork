@@ -5,13 +5,16 @@
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
     "axios": "^1.19.0",
-    "expo": "~57.0.13",
+    "chai": "^6.2.2",
+    "expo": "^46.0.21",
     "expo-font": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "lucide-react-native": "^1.31.0",
+    "mocha": "^12.0.0",
     "react": "19.2.3",
     "react-native": "0.86.2",
-    "react-native-svg": "15.15.4"
+    "react-native-svg": "15.15.4",
+    "supertest": "^7.2.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -21,7 +24,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test:api": "node \"./API testing/run-api-tests.mjs\""
   },
   "private": true
 }

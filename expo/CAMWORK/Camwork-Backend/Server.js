@@ -1,5 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 dotenv.config();
 import { connectToDatabase } from "./dbconnect.js";
 import userrouter from "./user/userroute.js";
@@ -15,7 +17,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   );
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") {
@@ -42,14 +44,24 @@ const PORT = Number(process.env.PORT || 3000);
 
 const start = async () => {
   await connectToDatabase();
-  // Keep production data intact. Opt in to schema alteration only for a migration.
-  await sequelize.sync({ alter: process.env.DB_SYNC_ALTER === "true" });
+  // Keep schema changes enabled by default so newly deployed escrow fields are
+  // created for existing installations. Set DB_SYNC_ALTER=false to disable it
+  // when schema changes are managed by an external migration system.
+  await sequelize.sync({ alter: process.env.DB_SYNC_ALTER !== "false" });
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`CamWork API listening on port ${PORT}`);
   });
 };
 
-start().catch((error) => {
-  console.error("CamWork API could not start:", error);
-  process.exit(1);
-});
+const isMainModule =
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  start().catch((error) => {
+    console.error("CamWork API could not start:", error);
+    process.exit(1);
+  });
+}
+
+export { app };

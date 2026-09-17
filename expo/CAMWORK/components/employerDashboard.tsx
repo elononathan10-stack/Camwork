@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react-native";
+import { Alert } from "react-native";
 import { router } from "expo-router";
 import { theme } from "./theme";
 import { searchWorkersApi } from "./api";
@@ -28,7 +29,8 @@ type Worker = {
 };
 
 export default function EmployerDashboard() {
-  const { user, jobs, applications, updateApplicationStatus } = useUser();
+  const { user, jobs, applications, updateApplicationStatus, updateJobStatus } =
+    useUser();
   const insets = useSafeAreaInsets();
   const [workers, setWorkers] = React.useState<Worker[]>([]);
   const [workersLoading, setWorkersLoading] = React.useState(false);
@@ -38,6 +40,73 @@ export default function EmployerDashboard() {
   const employerApplications = applications.filter((application) =>
     ownJobs.some((job) => job.id === application.jobId),
   );
+  const jobStatuses = [
+    "open",
+    "closed",
+    "filled",
+    "in-progress",
+    "completed",
+    "archived",
+  ] as const;
+
+  const changeJobStatus = async (
+    jobId: string,
+    status: (typeof jobStatuses)[number],
+  ) => {
+    try {
+      await updateJobStatus(jobId, status);
+    } catch (error) {
+      Alert.alert(
+        "Job status update failed",
+        error instanceof Error ? error.message : "Unable to update job status.",
+      );
+    }
+  };
+
+  const changeApplicationStatus = async (
+    applicationId: string,
+    status: "Accepted" | "Rejected",
+  ) => {
+    try {
+      await updateApplicationStatus(applicationId, status);
+    } catch (error) {
+      Alert.alert(
+        "Status update failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to update application status.",
+      );
+    }
+  };
+
+  const validateAndFund = (applicationId: string) => {
+    Alert.alert(
+      "Fund escrow to validate",
+      "Validation is completed when the job offer's compensation is deposited into escrow. The applicant will be notified once the funds are held.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Validate & fund",
+          onPress: async () => {
+            try {
+              await updateApplicationStatus(applicationId, "Accepted");
+              router.push({
+                pathname: "/payment",
+                params: { applicationId },
+              });
+            } catch (error) {
+              Alert.alert(
+                "Validation failed",
+                error instanceof Error
+                  ? error.message
+                  : "Unable to validate this application.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
 
   React.useEffect(() => {
     if (user?.role !== "employer") return;
@@ -121,15 +190,62 @@ export default function EmployerDashboard() {
               }}
             />
             <Text style={styles.sectionTitle}>Employees and skills</Text>
+            <Text style={styles.sectionTitle}>Your job offers</Text>
+            {ownJobs.map((job) => (
+              <View key={job.id} style={styles.applicationCard}>
+                <View style={styles.body}>
+                  <Text style={styles.workerName}>{job.title}</Text>
+                  <Text style={styles.meta}>{job.status || "open"}</Text>
+                </View>
+                <View style={styles.statusActions}>
+                  {jobStatuses.map((nextStatus) => (
+                    <TouchableOpacity
+                      key={nextStatus}
+                      style={[
+                        styles.statusButton,
+                        (job.status || "open") === nextStatus &&
+                          styles.statusButtonActive,
+                      ]}
+                      onPress={() => changeJobStatus(job.id, nextStatus)}
+                    >
+                      <Text
+                        style={[
+                          styles.statusButtonText,
+                          (job.status || "open") === nextStatus &&
+                            styles.statusButtonTextActive,
+                        ]}
+                      >
+                        {nextStatus}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
             {employerApplications.length > 0 && (
               <View>
                 <Text style={styles.sectionTitle}>Applicant review</Text>
                 {employerApplications.map((application) => (
                   <View key={application.id} style={styles.applicationCard}>
                     <View style={styles.body}>
-                      <Text style={styles.workerName}>
-                        {application.jobTitle}
-                      </Text>
+                      <TouchableOpacity
+                        onPress={() =>
+                          router.push({
+                            pathname: "/worker-profile",
+                            params: {
+                              id: application.applicantEmail || application.id,
+                              email: application.applicantEmail || "",
+                              name: "Applicant",
+                            },
+                          })
+                        }
+                      >
+                        <Text style={styles.workerName}>
+                          {application.applicantEmail ||
+                            "View applicant profile"}
+                        </Text>
+                        <Text style={styles.meta}>{application.jobTitle}</Text>
+                      </TouchableOpacity>
                       <Text style={styles.meta}>
                         {application.companyName} · {application.status}
                       </Text>
@@ -139,7 +255,7 @@ export default function EmployerDashboard() {
                         <TouchableOpacity
                           style={styles.reviewButton}
                           onPress={() =>
-                            updateApplicationStatus(application.id, "Rejected")
+                            changeApplicationStatus(application.id, "Rejected")
                           }
                           accessibilityLabel="Refuse application"
                         >
@@ -147,10 +263,8 @@ export default function EmployerDashboard() {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.reviewButton}
-                          onPress={() =>
-                            updateApplicationStatus(application.id, "Accepted")
-                          }
-                          accessibilityLabel="Validate application"
+                          onPress={() => validateAndFund(application.id)}
+                          accessibilityLabel="Validate application and fund escrow"
                         >
                           <CheckCircle2
                             size={20}
@@ -159,6 +273,33 @@ export default function EmployerDashboard() {
                         </TouchableOpacity>
                       </View>
                     )}
+                    {application.paymentValidated &&
+                      application.status !== "Completed" && (
+                        <View style={styles.applicationActions}>
+                          {(["In Progress", "Completed"] as const).map(
+                            (status) => (
+                              <TouchableOpacity
+                                key={status}
+                                style={styles.statusButton}
+                                onPress={() =>
+                                  status === "Completed"
+                                    ? router.push("/applications")
+                                    : updateApplicationStatus(
+                                        application.id,
+                                        status,
+                                      )
+                                }
+                              >
+                                <Text style={styles.statusButtonText}>
+                                  {status === "Completed"
+                                    ? "Confirm completion"
+                                    : status}
+                                </Text>
+                              </TouchableOpacity>
+                            ),
+                          )}
+                        </View>
+                      )}
                   </View>
                 ))}
               </View>
@@ -284,6 +425,26 @@ const styles = StyleSheet.create({
   meta: { color: theme.colors.primary, fontSize: 12, marginTop: 3 },
   skills: { color: "#64748b", fontSize: 12, marginTop: 6 },
   applicationActions: { flexDirection: "row", gap: 8 },
+  statusActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    maxWidth: 150,
+  },
+  statusButton: {
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  statusButtonActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  statusButtonText: { color: "#64748b", fontSize: 10, fontWeight: "800" },
+  statusButtonTextActive: { color: "#fff" },
   reviewButton: {
     width: 40,
     height: 40,

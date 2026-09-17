@@ -22,6 +22,16 @@ type Worker = {
   bio?: string;
   location?: string;
   skills?: string[];
+  rating?: number;
+  reviewCount?: number;
+  workHistory?: Array<{
+    id: string;
+    title: string;
+    company: string;
+    location: string;
+    status: string;
+    date: string;
+  }>;
 };
 
 export default function WorkerProfileScreen() {
@@ -36,7 +46,9 @@ export default function WorkerProfileScreen() {
     searchWorkersApi("")
       .then((workers: Worker[]) => {
         const match = workers.find(
-          (item) => String(item.id) === String(params.id),
+          (item) =>
+            String(item.id) === String(params.id) ||
+            item.email?.toLowerCase() === params.email?.toLowerCase(),
         );
         if (match) setWorker(match);
       })
@@ -80,6 +92,30 @@ export default function WorkerProfileScreen() {
               ? worker.skills.join(", ")
               : "No skills provided"}
           </Text>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Rating</Text>
+          <Text style={styles.text}>
+            {worker.reviewCount
+              ? `${worker.rating}/5 (${worker.reviewCount} reviews)`
+              : "No completed reviews yet"}
+          </Text>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Work history</Text>
+          {worker.workHistory?.length ? (
+            worker.workHistory.map((item) => (
+              <View key={item.id} style={styles.historyItem}>
+                <Text style={styles.historyTitle}>{item.title}</Text>
+                <Text style={styles.text}>
+                  {item.company} · {item.location}
+                </Text>
+                <Text style={styles.historyStatus}>{item.status}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.text}>No accepted work history yet</Text>
+          )}
         </View>
         {!!worker.location && (
           <View style={styles.section}>
@@ -132,4 +168,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   text: { color: "#475569", lineHeight: 21 },
+  historyItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  historyTitle: { color: theme.colors.text, fontWeight: "800" },
+  historyStatus: {
+    color: theme.colors.primary,
+    marginTop: 3,
+    fontSize: 12,
+    fontWeight: "700",
+  },
 });

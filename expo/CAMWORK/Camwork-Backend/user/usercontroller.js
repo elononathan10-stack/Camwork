@@ -5,6 +5,7 @@ import User from "./usermodel.js";
 import { requireAuth } from "../middleware/auth.js";
 import { Op } from "sequelize";
 import { hasMeaningfulText } from "../middleware/validation.js";
+import Application from "../application/applicationmodel.js";
 
 const publicUser = (user) => {
   const { password, resetToken, resetTokenExpires, ...safeUser } =
@@ -45,12 +46,35 @@ export const searchWorkers = async (req, res) => {
       "skills",
     ],
   });
-  return res.json(
-    workers.map((worker) => ({
-      ...publicUser(worker),
-      skills: worker.skills ? JSON.parse(worker.skills) : [],
-    })),
+  const profiles = await Promise.all(
+    workers.map(async (worker) => {
+      const applications = await Application.findAll({
+        where: { applicantEmail: worker.email },
+        order: [["createdAt", "DESC"]],
+      });
+      return {
+        ...publicUser(worker),
+        skills: worker.skills ? JSON.parse(worker.skills) : [],
+        rating: 0,
+        reviewCount: 0,
+        workHistory: applications
+          .filter((application) =>
+            ["Accepted", "Funded", "In Progress", "Completed"].includes(
+              application.status,
+            ),
+          )
+          .map((application) => ({
+            id: application.id,
+            title: application.jobTitle,
+            company: application.companyName,
+            location: application.location,
+            status: application.status,
+            date: application.createdAt,
+          })),
+      };
+    }),
   );
+  return res.json(profiles);
 };
 
 export const updateProfile = async (req, res) => {
@@ -69,7 +93,7 @@ export const updateProfile = async (req, res) => {
   );
   if (updates.role) {
     const role = String(updates.role).toLowerCase();
-    if (!['seeker', 'employer'].includes(role)) {
+    if (!["seeker", "employer"].includes(role)) {
       return res.status(422).json({ error: "Invalid account role." });
     }
     updates.role = role;

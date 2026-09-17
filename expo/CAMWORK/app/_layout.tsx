@@ -1,5 +1,5 @@
 import { Redirect, Stack, useSegments } from "expo-router";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -64,7 +64,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     "ForgotPassword",
   ].includes(segments[0] || "index");
 
-  if (isLoading) return null;
+  if (isLoading)
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color="#0f766e" />
+      </View>
+    );
   if (!user && !isPublicRoute) return <Redirect href="/" />;
   if (user && isPublicRoute) return <Redirect href="/(tabs)" />;
   return <>{children}</>;

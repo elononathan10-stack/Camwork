@@ -7,7 +7,14 @@ import {
 } from "../middleware/validation.js";
 
 const jobrouter = express.Router();
-const jobStatuses = ["open", "closed", "filled", "archived"];
+const jobStatuses = [
+  "open",
+  "closed",
+  "filled",
+  "in-progress",
+  "completed",
+  "archived",
+];
 const restrictedContactPattern =
   /(?:\+?\d[\d\s().-]{6,}\d|\b\d{7,}\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b(?:meet|meeting|address|whatsapp|telegram|phone|call me|text me|contact me)\b)/i;
 
@@ -45,10 +52,12 @@ const validateJob = (body) => {
       body.company,
       body.location,
       body.category,
-      body.salary,
       body.description,
     ])
   )
+    return "Please provide meaningful job details.";
+  const salary = String(body.salary).trim();
+  if (!/^\d[\d\s.,-]*$/.test(salary) && !hasMeaningfulText(salary))
     return "Please provide meaningful job details.";
   if (body.skills && !body.skills.every((skill) => hasMeaningfulText(skill)))
     return "Please provide meaningful skills.";

@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
@@ -7,18 +13,38 @@ import {
   createApplication,
   createJob as createJobApi,
   getApplications,
+  getJobs,
   getConversations,
   updateApplicationStatusApi,
   validateApplicationApi,
+  confirmApplicationCompletionApi,
   uploadVerificationDocumentApi,
   getDirectOffersApi,
   updateDirectOfferStatusApi,
   updateJobStatusApi,
+  deleteJob as deleteJobApi,
   createConversation,
   sendMessage,
   updateJob as updateJobApi,
   updateUserProfileApi,
+  createPayment as createPaymentApi,
+  getPayments as getPaymentsApi,
 } from "@/components/api";
+
+export interface PaymentItem {
+  id: string | number;
+  payerEmail: string;
+  amount: number | string;
+  method: "mtn-mobile-money" | "orange-money" | "card";
+  applicationId?: string | null;
+  status: "held" | "released" | "completed" | "refunded" | "pending";
+  releasedAt?: string | null;
+  createdAt?: string;
+  jobTitle?: string;
+  companyName?: string;
+  applicantEmail?: string | null;
+  employerEmail?: string | null;
+}
 
 export interface SkillItem {
   id: string;
@@ -50,6 +76,7 @@ export interface ReviewItem {
 export interface ApplicationItem {
   id: string;
   jobId: string;
+  applicantEmail?: string;
   jobTitle: string;
   companyName: string;
   companyLogo?: string;
@@ -57,13 +84,30 @@ export interface ApplicationItem {
   salary: string;
   type: "Formal" | "Gig";
   appliedDate: string;
-  status: "Pending" | "Reviewed" | "Interviews" | "Accepted" | "Rejected";
+  status:
+    | "Pending"
+    | "Reviewed"
+    | "Interviews"
+    | "Accepted"
+    | "Funded"
+    | "In Progress"
+    | "Rejected"
+    | "Completed";
   coverNote?: string;
   nextStep?: string;
   employerValidated?: boolean;
   seekerValidated?: boolean;
   paymentValidated?: boolean;
-  employmentStatus?: "pending" | "active" | "rejected";
+  employmentStatus?: "pending" | "active" | "rejected" | "completed";
+  employerCompletionConfirmed?: boolean;
+  seekerCompletionConfirmed?: boolean;
+  completedAt?: string;
+  employerRating?: number;
+  seekerRating?: number;
+  employerReview?: string;
+  seekerReview?: string;
+  payoutMethod?: "mtn-mobile-money" | "orange-money" | "card";
+  payoutAccount?: string;
 }
 
 export interface DirectOfferItem {
@@ -156,7 +200,13 @@ export interface JobListing {
   postedBy?: string;
   postedByRole?: "seeker" | "employer";
   isServiceRequest?: boolean;
-  status?: "open" | "closed" | "filled" | "archived";
+  status?:
+    | "open"
+    | "closed"
+    | "filled"
+    | "in-progress"
+    | "completed"
+    | "archived";
 }
 
 export type CreateJobInput = Pick<
@@ -208,6 +258,13 @@ interface UserContextType {
   notifications: NotificationItem[];
   conversations: ConversationItem[];
   jobs: JobListing[];
+  payments: PaymentItem[];
+  fundEscrowPayment: (payload: {
+    amount: string;
+    method: "mtn-mobile-money" | "orange-money" | "card";
+    applicationId?: string;
+  }) => Promise<PaymentItem>;
+  refreshPayments: () => Promise<void>;
   createJob: (job: CreateJobInput, isServiceRequest?: boolean) => Promise<void>;
   updateJob: (
     jobId: string,
@@ -218,6 +275,7 @@ interface UserContextType {
     jobId: string,
     status: NonNullable<JobListing["status"]>,
   ) => Promise<void>;
+  deleteJob: (jobId: string) => Promise<void>;
   switchRole: (role: "seeker" | "employer") => Promise<void>;
   startConversation: (
     recipientName: string,
@@ -236,10 +294,20 @@ interface UserContextType {
     applicationId: string,
     status: ApplicationItem["status"],
   ) => Promise<void>;
+  refreshApplications: () => Promise<void>;
   validateApplication: (
     applicationId: string,
     validated: boolean,
   ) => Promise<void>;
+  confirmApplicationCompletion: (
+    applicationId: string,
+    payload: {
+      rating: number;
+      review?: string;
+      payoutMethod?: "mtn-mobile-money" | "orange-money" | "card";
+      payoutAccount?: string;
+    },
+  ) => Promise<{ application: ApplicationItem; bothConfirmed: boolean; jobStatus?: string }>;
   toggleSaveJob: (jobId: string) => Promise<void>;
   acceptOffer: (offerId: string) => Promise<void>;
   declineOffer: (offerId: string) => Promise<void>;
@@ -735,6 +803,7 @@ type AccountSnapshot = {
   savedJobIds: string[];
   notifications: NotificationItem[];
   conversations: ConversationItem[];
+  payments?: PaymentItem[];
 };
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -749,6 +818,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [jobs, setJobs] = useState<JobListing[]>(INITIAL_JOBS);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -764,6 +834,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       savedJobIds,
       notifications,
       conversations,
+      payments,
     };
     await AsyncStorage.setItem(
       accountStorageKey(email),
@@ -782,6 +853,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     setSavedJobIds(account.savedJobIds || []);
     setNotifications(account.notifications || []);
     setConversations(account.conversations || []);
+    if (account.payments) setPayments(account.payments);
   };
 
   useEffect(() => {
@@ -789,6 +861,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const token = await AsyncStorage.getItem("camwork_token");
         const savedUser = await AsyncStorage.getItem("camwork_user");
+        const savedPayments = await AsyncStorage.getItem("camwork_payments");
+        if (savedPayments) {
+          try {
+            setPayments(JSON.parse(savedPayments));
+          } catch {}
+        }
         if (savedUser && token) {
           const savedProfile = JSON.parse(savedUser) as SeekerProfile;
           // Removes the old development account that was previously persisted
@@ -810,7 +888,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         } else if (savedUser || !token) {
           await AsyncStorage.removeItem("camwork_user");
         }
-        setJobs(INITIAL_JOBS);
+        try {
+          const remoteJobs = await getJobs();
+          setJobs(Array.isArray(remoteJobs) ? remoteJobs : []);
+        } catch (error) {
+          console.error("Failed to load jobs from backend:", error);
+          setJobs([]);
+        }
       } catch (error) {
         console.error("Failed to load user state from storage:", error);
       } finally {
@@ -826,6 +910,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       currentJobs.length > 0 ? currentJobs : INITIAL_JOBS,
     );
   }, [isLoading]);
+
+  useEffect(() => {
+    if (isLoading || !user?.email) return;
+    getJobs()
+      .then((remoteJobs) =>
+        setJobs(Array.isArray(remoteJobs) ? remoteJobs : []),
+      )
+      .catch((error) =>
+        console.error("Failed to refresh jobs after authentication:", error),
+      );
+  }, [isLoading, user?.email]);
 
   useEffect(() => {
     if (!isLoading && user?.email) {
@@ -848,7 +943,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     if (isLoading || !user?.email) return;
     AsyncStorage.getItem("camwork_token").then((token) => {
       if (!token) return;
-      getApplications(user.role)
+      getApplications(user.role === "employer" ? "employer" : "seeker")
         .then(setApplications)
         .catch(async (error) => {
           if (!(await clearExpiredSession(error))) {
@@ -892,6 +987,25 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         );
     });
   }, [isLoading, user?.email, user?.role]);
+
+  useEffect(() => {
+    if (isLoading || !user?.email) return;
+    AsyncStorage.getItem("camwork_token").then((token) => {
+      if (!token) return;
+      getPaymentsApi()
+        .then((remotePayments) => {
+          if (Array.isArray(remotePayments) && remotePayments.length > 0) {
+            setPayments(remotePayments);
+          }
+        })
+        .catch((error) =>
+          clearExpiredSession(error).then((wasExpired) => {
+            if (!wasExpired)
+              console.error("Failed to load payments:", error);
+          }),
+        );
+    });
+  }, [isLoading, user?.email]);
 
   const setUser = async (userData: Partial<SeekerProfile>) => {
     const updated = {
@@ -974,6 +1088,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const deleteJob = async (jobId: string) => {
+    await deleteJobApi(jobId);
+    setJobs((previous) => previous.filter((item) => item.id !== jobId));
+  };
+
   const addSkill = async (skillName: string) => {
     if (!skillName.trim()) return;
     const newSkill: SkillItem = {
@@ -1018,13 +1137,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const applyToJob = async (job: JobListing, coverNote?: string) => {
+    if (!job?.id) throw new Error("This job is no longer available.");
     if (
       job.postedBy?.trim().toLowerCase() === user?.email?.trim().toLowerCase()
     ) {
       throw new Error("You cannot apply to your own job posting.");
     }
     const exists = applications.find((a) => a.jobId === job.id);
-    if (exists) return;
+    if (exists) throw new Error("You already applied to this job.");
 
     const savedApplication = await createApplication({
       jobId: job.id,
@@ -1102,6 +1222,81 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const refreshApplications = useCallback(async () => {
+    if (!user?.email) return;
+    const remoteApplications = await getApplications(
+      user.role === "employer" ? "employer" : "seeker",
+    );
+    setApplications(remoteApplications);
+  }, [user?.email, user?.role]);
+
+  const refreshPayments = useCallback(async () => {
+    if (!user?.email) return;
+    try {
+      const remotePayments = await getPaymentsApi();
+      if (Array.isArray(remotePayments)) {
+        setPayments(remotePayments);
+        await AsyncStorage.setItem("camwork_payments", JSON.stringify(remotePayments));
+      }
+    } catch (error) {
+      if (!(await clearExpiredSession(error))) throw error;
+    }
+  }, [user?.email]);
+
+  const fundEscrowPayment = async (payload: {
+    amount: string;
+    method: "mtn-mobile-money" | "orange-money" | "card";
+    applicationId?: string;
+  }): Promise<PaymentItem> => {
+    if (!user?.email) throw new Error("Please sign in before making a payment.");
+
+    const result = await createPaymentApi({
+      payerEmail: user.email,
+      amount: payload.amount,
+      method: payload.method,
+      applicationId: payload.applicationId,
+    });
+    const resultPayment: PaymentItem = result.payment || result;
+
+    // Update payments state
+    setPayments((prev) => [resultPayment, ...prev.filter((p) => p.id !== resultPayment.id)]);
+
+    // Update application state if linked
+    if (payload.applicationId) {
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === payload.applicationId
+            ? {
+                ...app,
+                paymentValidated: true,
+                status: "Funded",
+                employerValidated: true,
+                employmentStatus: app.seekerValidated ? "active" : "pending",
+              }
+            : app,
+        ),
+      );
+    }
+
+    // Add notification
+    const newNotif: NotificationItem = {
+      id: `n-${Date.now()}`,
+      type: "job",
+      title: "Escrow Funded Successfully",
+      body: `Payment of ${payload.amount} FCFA is held safely in escrow.`,
+      time: "Just now",
+      unread: true,
+      targetScreen: "payment",
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+
+    try {
+      await AsyncStorage.setItem("camwork_payments", JSON.stringify([resultPayment, ...payments]));
+    } catch {}
+
+    return resultPayment;
+  };
+
   const validateApplication = async (
     applicationId: string,
     validated: boolean,
@@ -1115,6 +1310,57 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         application.id === applicationId ? savedApplication : application,
       ),
     );
+  };
+
+  const confirmApplicationCompletion = async (
+    applicationId: string,
+    payload: {
+      rating: number;
+      review?: string;
+      payoutMethod?: "mtn-mobile-money" | "orange-money" | "card";
+      payoutAccount?: string;
+    },
+  ) => {
+    const result = await confirmApplicationCompletionApi(applicationId, payload);
+    const savedApplication = result.application || result;
+    const bothConfirmed = Boolean(
+      result.bothConfirmed || savedApplication.status === "Completed",
+    );
+    setApplications((previous) =>
+      previous.map((application) =>
+        application.id === applicationId ? savedApplication : application,
+      ),
+    );
+    // If backend returned released payment or mutual completion, mark payment as released in local state
+    if (result.payment) {
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.applicationId === applicationId || p.id === result.payment.id
+            ? { ...p, status: "released", releasedAt: new Date().toISOString() }
+            : p,
+        ),
+      );
+    } else if (bothConfirmed) {
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.applicationId === applicationId
+            ? { ...p, status: "released", releasedAt: new Date().toISOString() }
+            : p,
+        ),
+      );
+    }
+    if (bothConfirmed) {
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === savedApplication.jobId ? { ...j, status: "completed" } : j,
+        ),
+      );
+    }
+    return {
+      application: savedApplication,
+      bothConfirmed,
+      jobStatus: bothConfirmed ? "completed" : undefined,
+    };
   };
 
   const acceptOffer = async (offerId: string) => {
@@ -1248,32 +1494,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const visibleJobs = jobs.filter((job) => {
-    if (!user || user.role !== "seeker" || skills.length === 0) return true;
-    const aptitudeText = [
-      user.headline,
-      user.bio,
-      ...skills.map((skill) => skill.name),
-    ]
-      .join(" ")
-      .toLowerCase();
-    const jobText = [
-      job.title,
-      job.category,
-      job.description,
-      ...job.skills,
-      ...job.requirements,
-    ]
-      .join(" ")
-      .toLowerCase();
-    return (
-      skills.some((skill) => jobText.includes(skill.name.toLowerCase())) ||
-      aptitudeText
-        .split(/[^a-z0-9]+/)
-        .filter((word) => word.length > 3)
-        .some((word) => jobText.includes(word))
-    );
-  });
+  // Every seeker can browse every active offer. Matching belongs in search and
+  // recommendations; it must not hide jobs from newly created accounts.
+  const visibleJobs = jobs;
 
   const logout = async () => {
     if (user?.email) {
@@ -1291,6 +1514,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     setSavedJobIds([]);
     setNotifications([]);
     setConversations([]);
+    setPayments([]);
     try {
       await AsyncStorage.multiRemove([
         "camwork_user",
@@ -1299,6 +1523,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         "camwork_skills",
         "camwork_work_history",
         "camwork_saved_jobs",
+        "camwork_payments",
       ]);
     } catch (e) {
       console.error("Error logging out:", e);
@@ -1317,10 +1542,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         savedJobIds,
         notifications,
         conversations,
+        payments,
         jobs: visibleJobs,
         createJob,
         updateJob,
         updateJobStatus,
+        deleteJob,
         switchRole,
         startConversation,
         isLoading,
@@ -1331,7 +1558,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         addWorkHistory,
         applyToJob,
         updateApplicationStatus,
+        refreshApplications,
+        fundEscrowPayment,
+        refreshPayments,
         validateApplication,
+        confirmApplicationCompletion,
         toggleSaveJob,
         acceptOffer,
         declineOffer,

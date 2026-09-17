@@ -15,6 +15,10 @@ const Payment = sequelize.define("Payment", {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false,
   },
+  applicationId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   method: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -23,6 +27,10 @@ const Payment = sequelize.define("Payment", {
     type: DataTypes.STRING,
     allowNull: false,
     defaultValue: "held",
+  },
+  releasedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
   },
 });
 

@@ -210,13 +210,17 @@ export const resetPassword = async (token: string, password: string) => {
 export const createPayment = async (payload: {
   payerEmail: string;
   amount: string;
-  method: "mobile-money" | "card";
+  method: "mtn-mobile-money" | "orange-money" | "card";
   applicationId?: string;
 }) => {
   return authenticatedRequest("/api/payments", {
     method: "POST",
     body: JSON.stringify(payload),
   });
+};
+
+export const getPayments = async () => {
+  return authenticatedRequest("/api/payments");
 };
 
 const authenticatedRequest = async (
@@ -252,6 +256,11 @@ export const updateJob = async (jobId: string, job: object) =>
 
 export const deleteJob = async (jobId: string) =>
   authenticatedRequest(`/api/jobs/${jobId}`, { method: "DELETE" });
+
+export const getJobs = async (): Promise<any[]> => {
+  const response = await fetch(`${getApiBaseUrl()}/api/jobs`);
+  return handleApiResponse(response);
+};
 
 export const getConversations = async () =>
   authenticatedRequest("/api/messages");
@@ -293,6 +302,20 @@ export const validateApplicationApi = async (
   authenticatedRequest(`/api/applications/${applicationId}/validate`, {
     method: "PATCH",
     body: JSON.stringify({ validated }),
+  });
+
+export const confirmApplicationCompletionApi = async (
+  applicationId: string,
+  payload: {
+    rating: number;
+    review?: string;
+    payoutMethod?: "mtn-mobile-money" | "orange-money" | "card";
+    payoutAccount?: string;
+  },
+) =>
+  authenticatedRequest(`/api/applications/${applicationId}/completion`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 
 export const updateJobStatusApi = async (jobId: string, status: string) =>

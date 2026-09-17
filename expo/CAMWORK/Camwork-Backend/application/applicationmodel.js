@@ -33,7 +33,24 @@ const Application = sequelize.define("Application", {
     allowNull: false,
     defaultValue: "pending",
   },
+  employerCompletionConfirmed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  seekerCompletionConfirmed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  completedAt: { type: DataTypes.DATE, allowNull: true },
   paymentId: { type: DataTypes.INTEGER, allowNull: true },
+  employerRating: { type: DataTypes.INTEGER, allowNull: true },
+  seekerRating: { type: DataTypes.INTEGER, allowNull: true },
+  employerReview: { type: DataTypes.TEXT, allowNull: true },
+  seekerReview: { type: DataTypes.TEXT, allowNull: true },
+  payoutMethod: { type: DataTypes.STRING, allowNull: true },
+  payoutAccount: { type: DataTypes.STRING, allowNull: true },
 });
 
 export default Application;

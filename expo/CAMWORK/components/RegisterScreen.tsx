@@ -499,7 +499,7 @@ const RegisterScreen = () => {
               <Text style={styles.footerPrompt}>{t.auth.hasAccount} </Text>
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => router.replace("/")}
+                onPress={() => router.push("/")}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.logInLink}>{t.auth.loginHere}</Text>

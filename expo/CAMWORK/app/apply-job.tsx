@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   StatusBar,
+  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -34,13 +35,20 @@ export default function ApplyJobScreen() {
   const { jobs, user, applyToJob, startConversation } = useUser();
   const { language, t } = useLanguage();
 
-  const job = jobs.find((j) => j.id === id) || jobs[0];
+  const job = jobs.find((j) => j.id === id);
 
   const [coverNote, setCoverNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmationVisible, setIsConfirmationVisible] = useState(false);
 
   const handleSubmitApplication = async () => {
+    if (!job) {
+      Alert.alert(
+        "Job unavailable",
+        "This job post could not be found. Please return to search and choose an active listing.",
+      );
+      return;
+    }
     setIsSubmitting(true);
     // Simulate submission latency
     await new Promise((res) => setTimeout(res, 600));
@@ -51,11 +59,21 @@ export default function ApplyJobScreen() {
       setIsConfirmationVisible(true);
     } catch (error) {
       setIsSubmitting(false);
-      throw error;
+      Alert.alert(
+        "Application failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to submit application.",
+      );
     }
   };
 
   const handleCloseConfirmation = async () => {
+    if (!job) {
+      setIsConfirmationVisible(false);
+      router.replace("/(tabs)/search");
+      return;
+    }
     setIsConfirmationVisible(false);
     const conversationId = await startConversation(
       job.company,
@@ -103,16 +121,18 @@ export default function ApplyJobScreen() {
           {/* Target Job Summary Card */}
           <View style={styles.jobSummaryCard}>
             <View style={styles.jobLogoCircle}>
-              <Text style={styles.logoLetter}>{job.company.charAt(0)}</Text>
+              <Text style={styles.logoLetter}>
+                {job?.company?.charAt(0) || "?"}
+              </Text>
             </View>
             <View style={styles.jobInfoWrap}>
               <Text style={styles.jobTitle} numberOfLines={1}>
-                {job.title}
+                {job?.title || "Job unavailable"}
               </Text>
               <Text style={styles.jobCompany}>
-                {job.company} • {job.location}
+                {job?.company} • {job?.location}
               </Text>
-              <Text style={styles.jobSalary}>{job.salary}</Text>
+              <Text style={styles.jobSalary}>{job?.salary}</Text>
             </View>
           </View>
 
@@ -207,8 +227,8 @@ export default function ApplyJobScreen() {
         visible={isConfirmationVisible}
         onClose={handleCloseConfirmation}
         onBrowseMore={handleBrowseMore}
-        jobTitle={job.title}
-        companyName={job.company}
+        jobTitle={job?.title || "Job"}
+        companyName={job?.company || "CamWork"}
       />
     </SafeAreaView>
   );
