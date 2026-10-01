@@ -1,17 +1,20 @@
 import React from "react";
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Alert,
+  StatusBar,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, UserRound } from "lucide-react-native";
 import { searchWorkersApi } from "@/components/api";
 import { theme } from "@/components/theme";
+import { useUser } from "@/context/UserContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Worker = {
   id: number | string;
@@ -35,12 +38,20 @@ type Worker = {
 };
 
 export default function WorkerProfileScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     id: string;
     name: string;
     email: string;
   }>();
+  const { vouchForUser } = useUser();
   const [worker, setWorker] = React.useState<Partial<Worker>>(params);
+
+  const handleVouch = async () => {
+    if (!worker.name || !worker.email) return;
+    await vouchForUser(worker.name, worker.email);
+    Alert.alert("Vouch recorded", `You vouched for ${worker.name}.`);
+  };
 
   React.useEffect(() => {
     searchWorkersApi("")
@@ -56,15 +67,24 @@ export default function WorkerProfileScreen() {
   }, [params.id]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <ArrowLeft size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Employee profile</Text>
         <View style={styles.spacer} />
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 40 + insets.bottom },
+        ]}
+      >
         <View style={styles.profileHeader}>
           {worker.avatar ? (
             <Image source={{ uri: worker.avatar }} style={styles.avatar} />
@@ -78,6 +98,9 @@ export default function WorkerProfileScreen() {
           {!!worker.headline && (
             <Text style={styles.headline}>{worker.headline}</Text>
           )}
+          <TouchableOpacity style={styles.vouchButton} onPress={handleVouch}>
+            <Text style={styles.vouchButtonText}>Vouch for this person</Text>
+          </TouchableOpacity>
         </View>
         {!!worker.bio && (
           <View style={styles.section}>
@@ -124,7 +147,7 @@ export default function WorkerProfileScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -153,6 +176,14 @@ const styles = StyleSheet.create({
   name: { color: theme.colors.text, fontSize: 22, fontWeight: "900" },
   email: { color: "#64748b", marginTop: 4 },
   headline: { color: theme.colors.primary, marginTop: 10, fontWeight: "700" },
+  vouchButton: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+  },
+  vouchButtonText: { color: "#ffffff", fontWeight: "800" },
   section: {
     backgroundColor: "#fff",
     borderRadius: 12,

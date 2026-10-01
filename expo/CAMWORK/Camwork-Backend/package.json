@@ -12,6 +12,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js tests/test.server.js",
+    "test:post-job": "node --test tests/post-job.test.js",
+    "test:apply-job": "node --test tests/apply-job.test.js",
+    "test:get-jobs": "node --test tests/get-jobs.test.js",
+    "test:get-applications": "node --test tests/get-applications.test.js",
     "start": "node Server.js",
     "dev": "nodemon Server.js"
   },

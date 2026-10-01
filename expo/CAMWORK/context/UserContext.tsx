@@ -77,6 +77,11 @@ export interface ApplicationItem {
   id: string;
   jobId: string;
   applicantEmail?: string;
+  applicantName?: string;
+  applicantHeadline?: string;
+  applicantBio?: string;
+  applicantLocation?: string;
+  applicantSkills?: string[];
   jobTitle: string;
   companyName: string;
   companyLogo?: string;
@@ -307,11 +312,16 @@ interface UserContextType {
       payoutMethod?: "mtn-mobile-money" | "orange-money" | "card";
       payoutAccount?: string;
     },
-  ) => Promise<{ application: ApplicationItem; bothConfirmed: boolean; jobStatus?: string }>;
+  ) => Promise<{
+    application: ApplicationItem;
+    bothConfirmed: boolean;
+    jobStatus?: string;
+  }>;
   toggleSaveJob: (jobId: string) => Promise<void>;
   acceptOffer: (offerId: string) => Promise<void>;
   declineOffer: (offerId: string) => Promise<void>;
   requestVouch: (contact: string, relation: string) => Promise<void>;
+  vouchForUser: (personName: string, personEmail: string) => Promise<void>;
   markNotificationRead: (notifId: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   sendChatMessage: (conversationId: string, text: string) => Promise<void>;
@@ -859,34 +869,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const loadState = async () => {
       try {
-        const token = await AsyncStorage.getItem("camwork_token");
-        const savedUser = await AsyncStorage.getItem("camwork_user");
+        // Direct the user to the login screen on every fresh app start
+        await AsyncStorage.multiRemove(["camwork_user", "camwork_token"]);
+        setUserState(null);
+
         const savedPayments = await AsyncStorage.getItem("camwork_payments");
         if (savedPayments) {
           try {
             setPayments(JSON.parse(savedPayments));
           } catch {}
-        }
-        if (savedUser && token) {
-          const savedProfile = JSON.parse(savedUser) as SeekerProfile;
-          // Removes the old development account that was previously persisted
-          // on every test device. New installs always start with empty fields.
-          if (
-            savedProfile.email?.trim().toLowerCase() ===
-            "elononathan10@gmail.com"
-          ) {
-            await AsyncStorage.multiRemove(["camwork_user", "camwork_token"]);
-          } else {
-            setUserState(savedProfile);
-          }
-          if (
-            savedProfile.email &&
-            savedProfile.email.trim().toLowerCase() !==
-              "elononathan10@gmail.com"
-          )
-            await restoreAccountSnapshot(savedProfile.email);
-        } else if (savedUser || !token) {
-          await AsyncStorage.removeItem("camwork_user");
         }
         try {
           const remoteJobs = await getJobs();
@@ -896,7 +887,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
           setJobs([]);
         }
       } catch (error) {
-        console.error("Failed to load user state from storage:", error);
+        console.error("Failed to initialize user state from storage:", error);
       } finally {
         setIsLoading(false);
       }
@@ -1000,8 +991,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         })
         .catch((error) =>
           clearExpiredSession(error).then((wasExpired) => {
-            if (!wasExpired)
-              console.error("Failed to load payments:", error);
+            if (!wasExpired) console.error("Failed to load payments:", error);
           }),
         );
     });
@@ -1236,7 +1226,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       const remotePayments = await getPaymentsApi();
       if (Array.isArray(remotePayments)) {
         setPayments(remotePayments);
-        await AsyncStorage.setItem("camwork_payments", JSON.stringify(remotePayments));
+        await AsyncStorage.setItem(
+          "camwork_payments",
+          JSON.stringify(remotePayments),
+        );
       }
     } catch (error) {
       if (!(await clearExpiredSession(error))) throw error;
@@ -1248,7 +1241,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     method: "mtn-mobile-money" | "orange-money" | "card";
     applicationId?: string;
   }): Promise<PaymentItem> => {
-    if (!user?.email) throw new Error("Please sign in before making a payment.");
+    if (!user?.email)
+      throw new Error("Please sign in before making a payment.");
 
     const result = await createPaymentApi({
       payerEmail: user.email,
@@ -1259,7 +1253,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     const resultPayment: PaymentItem = result.payment || result;
 
     // Update payments state
-    setPayments((prev) => [resultPayment, ...prev.filter((p) => p.id !== resultPayment.id)]);
+    setPayments((prev) => [
+      resultPayment,
+      ...prev.filter((p) => p.id !== resultPayment.id),
+    ]);
 
     // Update application state if linked
     if (payload.applicationId) {
@@ -1291,7 +1288,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     setNotifications((prev) => [newNotif, ...prev]);
 
     try {
-      await AsyncStorage.setItem("camwork_payments", JSON.stringify([resultPayment, ...payments]));
+      await AsyncStorage.setItem(
+        "camwork_payments",
+        JSON.stringify([resultPayment, ...payments]),
+      );
     } catch {}
 
     return resultPayment;
@@ -1321,7 +1321,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       payoutAccount?: string;
     },
   ) => {
-    const result = await confirmApplicationCompletionApi(applicationId, payload);
+    const result = await confirmApplicationCompletionApi(
+      applicationId,
+      payload,
+    );
     const savedApplication = result.application || result;
     const bothConfirmed = Boolean(
       result.bothConfirmed || savedApplication.status === "Completed",
@@ -1389,6 +1392,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       targetScreen: "community-vouching",
     };
     setNotifications([notif, ...notifications]);
+  };
+
+  const vouchForUser = async (personName: string, personEmail: string) => {
+    if (!personName.trim() || !personEmail.trim()) return;
+    const notif: NotificationItem = {
+      id: `vouch-${Date.now()}`,
+      type: "vouch",
+      title: "Community vouch recorded",
+      body: `You vouched for ${personName.trim()} (${personEmail.trim()}).`,
+      time: "Just now",
+      unread: true,
+      targetScreen: "community-vouching",
+    };
+    setNotifications((previous) => [notif, ...previous]);
   };
 
   const markNotificationRead = async (notifId: string) => {
@@ -1567,6 +1584,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
         acceptOffer,
         declineOffer,
         requestVouch,
+        vouchForUser,
         markNotificationRead,
         markAllNotificationsRead,
         sendChatMessage,

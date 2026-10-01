@@ -7,14 +7,6 @@ import {
 } from "../middleware/validation.js";
 
 const jobrouter = express.Router();
-const jobStatuses = [
-  "open",
-  "closed",
-  "filled",
-  "in-progress",
-  "completed",
-  "archived",
-];
 const restrictedContactPattern =
   /(?:\+?\d[\d\s().-]{6,}\d|\b\d{7,}\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b(?:meet|meeting|address|whatsapp|telegram|phone|call me|text me|contact me)\b)/i;
 
@@ -116,16 +108,10 @@ jobrouter.delete("/:id", requireAuth, async (req, res) => {
 });
 
 jobrouter.patch("/:id/status", requireAuth, async (req, res) => {
-  if (!jobStatuses.includes(req.body.status))
-    return res.status(422).json({ error: "Invalid job status." });
-  const job = await Job.findByPk(req.params.id);
-  if (!job) return res.status(404).json({ error: "Job not found." });
-  if (job.ownerEmail !== req.auth.email)
-    return res
-      .status(403)
-      .json({ error: "You can only update your own job posts." });
-  await job.update({ status: req.body.status });
-  return res.json(serializeJob(job));
+  return res.status(403).json({
+    error:
+      "Job offer status is managed automatically by applications and escrow.",
+  });
 });
 
 export default jobrouter;

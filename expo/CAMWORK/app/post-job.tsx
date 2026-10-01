@@ -22,6 +22,7 @@ import {
   Building2,
   Zap,
   Check,
+  Trash2,
 } from "lucide-react-native";
 import { theme } from "@/components/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -45,7 +46,7 @@ const CATEGORIES = [
 
 export default function PostJobScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { user, jobs, createJob, updateJob } = useUser();
+  const { user, jobs, createJob, updateJob, deleteJob } = useUser();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
   const isEn = language === "EN";
@@ -76,7 +77,9 @@ export default function PostJobScreen() {
   const [contractDuration, setContractDuration] = useState(
     existingJob?.contractDuration || "",
   );
-  const [salary, setSalary] = useState(existingJob?.salary || "");
+  const [salary, setSalary] = useState(
+    existingJob?.salary ? existingJob.salary.replace(/[^0-9]/g, "") : "",
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -87,8 +90,52 @@ export default function PostJobScreen() {
     setCategory(existingJob.category);
     setJobType(existingJob.type || "Formal");
     setContractDuration(existingJob.contractDuration || "");
-    setSalary(existingJob.salary);
+    setSalary(existingJob.salary ? existingJob.salary.replace(/[^0-9]/g, "") : "");
   }, [existingJob]);
+
+  const handleSalaryChange = (text: string) => {
+    const numericOnly = text.replace(/[^0-9]/g, "");
+    setSalary(numericOnly);
+  };
+
+  const handleDelete = () => {
+    if (!existingJob) return;
+    Alert.alert(
+      isEn ? "Delete Job Offer" : "Supprimer l'offre d'emploi",
+      isEn
+        ? `Are you sure you want to delete "${existingJob.title}"? This action cannot be undone.`
+        : `Voulez-vous vraiment supprimer l'offre "${existingJob.title}" ? Cette action est irréversible.`,
+      [
+        { text: isEn ? "Cancel" : "Annuler", style: "cancel" },
+        {
+          text: isEn ? "Delete" : "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsSaving(true);
+              await deleteJob(existingJob.id);
+              setIsSaving(false);
+              Alert.alert(
+                isEn ? "Offer Deleted" : "Offre supprimée",
+                isEn
+                  ? "The job offer has been successfully deleted."
+                  : "L'offre d'emploi a été supprimée avec succès.",
+              );
+              router.replace("/(tabs)/search");
+            } catch (error) {
+              setIsSaving(false);
+              Alert.alert(
+                isEn ? "Error" : "Erreur",
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete job offer.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const submit = async () => {
     if (!title.trim() || !description.trim()) {
@@ -100,7 +147,18 @@ export default function PostJobScreen() {
       );
       return;
     }
+    const cleanSalaryDigits = salary.replace(/[^0-9]/g, "");
+    if (!cleanSalaryDigits) {
+      Alert.alert(
+        isEn ? "Compensation required" : "Rémunération requise",
+        isEn
+          ? "Please enter figures strictly for the compensation amount (e.g. 250000)."
+          : "Veuillez saisir strictement des chiffres pour le montant de la rémunération (ex. 250000).",
+      );
+      return;
+    }
     setIsSaving(true);
+    const formattedSalary = `${Number(cleanSalaryDigits).toLocaleString()} FCFA`;
     const job: CreateJobInput = {
       title: title.trim(),
       company: isServiceRequest
@@ -112,7 +170,7 @@ export default function PostJobScreen() {
       contractDuration:
         contractDuration.trim() ||
         (jobType === "Formal" ? "Full-time CDI" : "Short-term / Project"),
-      salary: salary.trim() || (isEn ? "Negotiable" : "À négocier"),
+      salary: formattedSalary,
       description: description.trim(),
       responsibilities: [],
       requirements: [],
@@ -161,7 +219,18 @@ export default function PostJobScreen() {
                 ? "Create a Job Offer"
                 : "Créer une offre d'emploi"}
         </Text>
-        <View style={styles.headerSpacer} />
+        {isEditing && existingJob ? (
+          <TouchableOpacity
+            style={styles.deleteHeaderButton}
+            onPress={handleDelete}
+            disabled={isSaving}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Trash2 size={20} color={theme.colors.error} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       <KeyboardAvoidingView
@@ -422,19 +491,24 @@ export default function PostJobScreen() {
           <Text style={styles.label}>
             {isServiceRequest
               ? isEn
-                ? "Budget Offered"
-                : "Budget proposé"
+                ? "Budget Offered (Figures strictly in FCFA) *"
+                : "Budget proposé (Chiffres uniquement en FCFA) *"
               : isEn
-                ? "Salary / Rate"
-                : "Salaire / Rémunération"}
+                ? "Compensation / Salary (Figures strictly in FCFA) *"
+                : "Rémunération / Salaire (Chiffres uniquement en FCFA) *"}
           </Text>
           <TextInput
             value={salary}
-            onChangeText={setSalary}
+            onChangeText={handleSalaryChange}
+            keyboardType="numeric"
             placeholder={
               jobType === "Formal"
-                ? "e.g. 350,000 - 500,000 FCFA / mo"
-                : "e.g. 25,000 FCFA / day"
+                ? isEn
+                  ? "e.g. 350000"
+                  : "ex. 350000"
+                : isEn
+                  ? "e.g. 25000"
+                  : "ex. 25000"
             }
             placeholderTextColor="#94a3b8"
             style={styles.input}
@@ -472,6 +546,21 @@ export default function PostJobScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {/* Delete Job Offer Button */}
+          {isEditing && existingJob && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+              disabled={isSaving}
+              activeOpacity={0.88}
+            >
+              <Trash2 size={18} color={theme.colors.error} />
+              <Text style={styles.deleteButtonText}>
+                {isEn ? "Delete Job Offer" : "Supprimer cette offre d'emploi"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -643,4 +732,29 @@ const styles = StyleSheet.create({
   },
   submitDisabled: { opacity: 0.5 },
   submitText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  deleteHeaderButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fee2e2",
+  },
+  deleteButton: {
+    minHeight: 52,
+    marginTop: 10,
+    borderRadius: 14,
+    backgroundColor: "#fff5f5",
+    borderWidth: 1.5,
+    borderColor: "#fecaca",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  deleteButtonText: {
+    color: theme.colors.error,
+    fontWeight: "800",
+    fontSize: 15,
+  },
 });

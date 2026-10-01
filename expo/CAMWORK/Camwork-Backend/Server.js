@@ -44,10 +44,9 @@ const PORT = Number(process.env.PORT || 3000);
 
 const start = async () => {
   await connectToDatabase();
-  // Keep schema changes enabled by default so newly deployed escrow fields are
-  // created for existing installations. Set DB_SYNC_ALTER=false to disable it
-  // when schema changes are managed by an external migration system.
-  await sequelize.sync({ alter: process.env.DB_SYNC_ALTER !== "false" });
+  // Schema alteration must be explicitly enabled for a one-off local migration.
+  // Repeated alter syncs can create duplicate MySQL indexes over time.
+  await sequelize.sync({ alter: process.env.DB_SYNC_ALTER === "true" });
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`CamWork API listening on port ${PORT}`);
   });

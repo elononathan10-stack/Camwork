@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import {
   CreditCard,
@@ -13,54 +14,59 @@ import {
   UserRound,
   CheckCircle2,
   XCircle,
+  Trash2,
+  Edit3,
+  Eye,
+  Briefcase,
+  MapPin,
+  Sparkles,
 } from "lucide-react-native";
-import { Alert } from "react-native";
 import { router } from "expo-router";
 import { theme } from "./theme";
-import { searchWorkersApi } from "./api";
 import { useUser } from "@/context/UserContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type Worker = {
-  id: number | string;
-  name: string;
-  email: string;
-  skills?: string[];
-};
-
 export default function EmployerDashboard() {
-  const { user, jobs, applications, updateApplicationStatus, updateJobStatus } =
+  const { user, jobs, applications, updateApplicationStatus, deleteJob } =
     useUser();
   const insets = useSafeAreaInsets();
-  const [workers, setWorkers] = React.useState<Worker[]>([]);
-  const [workersLoading, setWorkersLoading] = React.useState(false);
   const ownJobs = jobs.filter(
-    (job) => job.postedBy === user?.email && !job.isServiceRequest,
+    (job) =>
+      job.postedBy?.trim().toLowerCase() === user?.email?.trim().toLowerCase() &&
+      !job.isServiceRequest,
   );
   const employerApplications = applications.filter((application) =>
     ownJobs.some((job) => job.id === application.jobId),
   );
-  const jobStatuses = [
-    "open",
-    "closed",
-    "filled",
-    "in-progress",
-    "completed",
-    "archived",
-  ] as const;
 
-  const changeJobStatus = async (
-    jobId: string,
-    status: (typeof jobStatuses)[number],
-  ) => {
-    try {
-      await updateJobStatus(jobId, status);
-    } catch (error) {
-      Alert.alert(
-        "Job status update failed",
-        error instanceof Error ? error.message : "Unable to update job status.",
-      );
-    }
+  const handleDeleteJob = (jobId: string, jobTitle: string) => {
+    Alert.alert(
+      "Delete Job Offer",
+      `Are you sure you want to delete "${jobTitle}"? This will permanently remove the listing.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteJob(jobId);
+              Alert.alert(
+                "Offer Deleted",
+                "The job offer has been successfully deleted.",
+              );
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete job offer.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   const changeApplicationStatus = async (
@@ -108,15 +114,6 @@ export default function EmployerDashboard() {
     );
   };
 
-  React.useEffect(() => {
-    if (user?.role !== "employer") return;
-    setWorkersLoading(true);
-    searchWorkersApi("")
-      .then(setWorkers)
-      .catch(() => setWorkers([]))
-      .finally(() => setWorkersLoading(false));
-  }, [user?.role]);
-
   const actions = [
     {
       id: "post",
@@ -147,8 +144,8 @@ export default function EmployerDashboard() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
-        data={workers}
-        keyExtractor={(item) => String(item.id)}
+        data={employerApplications}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 36 + insets.bottom },
@@ -160,7 +157,7 @@ export default function EmployerDashboard() {
                 <Text style={styles.eyebrow}>Employer workspace</Text>
                 <Text style={styles.title}>{user?.name || "Your company"}</Text>
                 <Text style={styles.subtitle}>
-                  Find registered employees and review their available skills.
+                  Manage your job postings, active applicants, and worker hiring.
                 </Text>
               </View>
               <TouchableOpacity
@@ -189,42 +186,112 @@ export default function EmployerDashboard() {
                 );
               }}
             />
-            <Text style={styles.sectionTitle}>Employees and skills</Text>
-            <Text style={styles.sectionTitle}>Your job offers</Text>
-            {ownJobs.map((job) => (
-              <View key={job.id} style={styles.applicationCard}>
-                <View style={styles.body}>
-                  <Text style={styles.workerName}>{job.title}</Text>
-                  <Text style={styles.meta}>{job.status || "open"}</Text>
-                </View>
-                <View style={styles.statusActions}>
-                  {jobStatuses.map((nextStatus) => (
-                    <TouchableOpacity
-                      key={nextStatus}
-                      style={[
-                        styles.statusButton,
-                        (job.status || "open") === nextStatus &&
-                          styles.statusButtonActive,
-                      ]}
-                      onPress={() => changeJobStatus(job.id, nextStatus)}
-                    >
-                      <Text
-                        style={[
-                          styles.statusButtonText,
-                          (job.status || "open") === nextStatus &&
-                            styles.statusButtonTextActive,
-                        ]}
-                      >
-                        {nextStatus}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+
+            {/* Posted Job Offers Management Section */}
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Your Posted Job Offers</Text>
+              <TouchableOpacity
+                style={styles.newJobLink}
+                onPress={() => router.push("/post-job")}
+              >
+                <Plus size={15} color={theme.colors.primary} />
+                <Text style={styles.newJobLinkText}>Post New</Text>
+              </TouchableOpacity>
+            </View>
+
+            {ownJobs.length === 0 ? (
+              <View style={styles.emptyJobsCard}>
+                <Briefcase size={28} color="#94a3b8" />
+                <Text style={styles.emptyJobsTitle}>No job offers posted yet</Text>
+                <Text style={styles.emptyJobsSub}>
+                  Create your first job offer to start receiving applications.
+                </Text>
+                <TouchableOpacity
+                  style={styles.postJobEmptyBtn}
+                  onPress={() => router.push("/post-job")}
+                >
+                  <Plus size={16} color="#fff" />
+                  <Text style={styles.postJobEmptyBtnText}>Create Job Offer</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            ) : (
+              <View style={styles.jobsList}>
+                {ownJobs.map((job) => {
+                  const jobAppCount = applications.filter(
+                    (a) => a.jobId === job.id,
+                  ).length;
+                  return (
+                    <View key={job.id} style={styles.jobOfferCard}>
+                      <View style={styles.jobOfferHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.jobOfferTitle} numberOfLines={1}>
+                            {job.title}
+                          </Text>
+                          <Text style={styles.jobOfferMeta}>
+                            {job.category} · {job.type} · {job.salary}
+                          </Text>
+                        </View>
+                        <View style={styles.applicantBadge}>
+                          <Text style={styles.applicantBadgeText}>
+                            {jobAppCount} {jobAppCount === 1 ? "applicant" : "applicants"}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.jobOfferActions}>
+                        <TouchableOpacity
+                          style={styles.jobActionBtn}
+                          onPress={() =>
+                            router.push({
+                              pathname: "/job-detail",
+                              params: { id: job.id },
+                            })
+                          }
+                        >
+                          <Eye size={15} color={theme.colors.text} />
+                          <Text style={styles.jobActionBtnText}>View</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.jobActionBtn}
+                          onPress={() =>
+                            router.push({
+                              pathname: "/post-job",
+                              params: { id: job.id },
+                            })
+                          }
+                        >
+                          <Edit3 size={15} color={theme.colors.primary} />
+                          <Text
+                            style={[
+                              styles.jobActionBtnText,
+                              { color: theme.colors.primary },
+                            ]}
+                          >
+                            Edit
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.jobActionBtn, styles.jobDeleteBtn]}
+                          onPress={() => handleDeleteJob(job.id, job.title)}
+                          accessibilityLabel="Delete Job Offer"
+                        >
+                          <Trash2 size={15} color={theme.colors.error} />
+                          <Text style={styles.jobDeleteBtnText}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
+              Applicants for your job offers
+            </Text>
             {employerApplications.length > 0 && (
               <View>
-                <Text style={styles.sectionTitle}>Applicant review</Text>
                 {employerApplications.map((application) => (
                   <View key={application.id} style={styles.applicationCard}>
                     <View style={styles.body}>
@@ -240,13 +307,34 @@ export default function EmployerDashboard() {
                           })
                         }
                       >
-                        <Text style={styles.workerName}>
-                          {application.applicantEmail ||
-                            "View applicant profile"}
+                        <Text style={styles.workerName} numberOfLines={1}>
+                          {application.applicantName ||
+                            application.applicantEmail ||
+                            "Applicant"}
                         </Text>
-                        <Text style={styles.meta}>{application.jobTitle}</Text>
+                        <Text style={styles.meta} numberOfLines={1}>
+                          {application.jobTitle}
+                        </Text>
                       </TouchableOpacity>
-                      <Text style={styles.meta}>
+                      <Text style={styles.applicantInfo} numberOfLines={1}>
+                        Email: {application.applicantEmail || "Not provided"}
+                      </Text>
+                      {!!application.applicantHeadline && (
+                        <Text style={styles.applicantInfo} numberOfLines={1}>
+                          {application.applicantHeadline}
+                        </Text>
+                      )}
+                      <Text style={styles.applicantInfo} numberOfLines={1}>
+                        Location:{" "}
+                        {application.applicantLocation || "Not provided"}
+                      </Text>
+                      <Text style={styles.applicantInfo} numberOfLines={1}>
+                        Skills:{" "}
+                        {application.applicantSkills?.length
+                          ? application.applicantSkills.join(", ")
+                          : "Not provided"}
+                      </Text>
+                      <Text style={styles.meta} numberOfLines={1}>
                         {application.companyName} · {application.status}
                       </Text>
                     </View>
@@ -306,33 +394,14 @@ export default function EmployerDashboard() {
             )}
           </>
         }
-        renderItem={({ item }) => (
-          <View style={styles.workerCard}>
-            <View style={styles.workerIcon}>
-              <UserRound size={20} color={theme.colors.primary} />
-            </View>
-            <View style={styles.body}>
-              <Text style={styles.workerName}>{item.name}</Text>
-              <Text style={styles.meta}>{item.email}</Text>
-              <Text style={styles.skills}>
-                {item.skills?.length
-                  ? item.skills.join(", ")
-                  : "Skills not provided"}
-              </Text>
-            </View>
-          </View>
-        )}
+        renderItem={() => null}
         ListEmptyComponent={
           <View style={styles.empty}>
             <UserRound size={40} color="#94a3b8" />
-            <Text style={styles.emptyTitle}>
-              {workersLoading
-                ? "Loading employees..."
-                : "No employee profiles found"}
-            </Text>
+            <Text style={styles.emptyTitle}>No applicants yet</Text>
             <Text style={styles.emptyText}>
-              Only registered seeker accounts appear here. No sample employees
-              are shown.
+              Applicants for your job offers will appear here with their profile
+              information.
             </Text>
           </View>
         }
@@ -391,20 +460,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginBottom: 10,
   },
-  workerCard: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 14,
-    marginBottom: 10,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
   applicationCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    flexDirection: "column",
+    alignItems: "stretch",
     padding: 14,
     marginBottom: 10,
     backgroundColor: "#fff",
@@ -412,24 +470,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
-  workerIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primaryLight,
-  },
-  body: { flex: 1 },
+  body: { width: "100%" },
   workerName: { color: theme.colors.text, fontSize: 15, fontWeight: "800" },
   meta: { color: theme.colors.primary, fontSize: 12, marginTop: 3 },
   skills: { color: "#64748b", fontSize: 12, marginTop: 6 },
-  applicationActions: { flexDirection: "row", gap: 8 },
-  statusActions: {
+  applicantInfo: { color: "#475569", fontSize: 12, marginTop: 5 },
+  applicationActions: {
+    alignSelf: "flex-end",
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    maxWidth: 150,
+    gap: 8,
+    marginTop: 12,
   },
   statusButton: {
     paddingHorizontal: 7,
@@ -452,6 +502,137 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 10,
     backgroundColor: "#f8fafc",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  newJobLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: theme.colors.primaryLight,
+  },
+  newJobLinkText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: theme.colors.primary,
+  },
+  emptyJobsCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderStyle: "dashed",
+    marginBottom: 16,
+  },
+  emptyJobsTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: theme.colors.text,
+    marginTop: 8,
+  },
+  emptyJobsSub: {
+    fontSize: 12,
+    color: "#64748b",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  postJobEmptyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+  },
+  postJobEmptyBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  jobsList: {
+    gap: 10,
+    marginBottom: 10,
+  },
+  jobOfferCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  jobOfferHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  jobOfferTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: theme.colors.text,
+  },
+  jobOfferMeta: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 3,
+  },
+  applicantBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: theme.colors.primaryLight,
+  },
+  applicantBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: theme.colors.primary,
+  },
+  jobOfferActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  jobActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  jobActionBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.text,
+  },
+  jobDeleteBtn: {
+    backgroundColor: "#fff5f5",
+    borderColor: "#fecaca",
+  },
+  jobDeleteBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.error,
   },
   empty: { alignItems: "center", paddingVertical: 70, paddingHorizontal: 24 },
   emptyTitle: {

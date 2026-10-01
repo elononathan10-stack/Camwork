@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
@@ -8,6 +8,8 @@ import {
   SafeAreaView,
   StatusBar,
   Share,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -25,6 +27,8 @@ import {
   Building2,
   ArrowRight,
   Check,
+  Trash2,
+  Edit3,
 } from "lucide-react-native";
 import { theme } from "@/components/theme";
 import { useUser } from "@/context/UserContext";
@@ -41,19 +45,24 @@ export default function JobDetailScreen() {
     skills,
     user,
     startConversation,
+    deleteJob,
   } = useUser();
   const { language, t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const job = jobs.find((j) => j.id === id) || jobs[0];
-  const isSaved = savedJobIds.includes(job.id);
-  const isAlreadyApplied = applications.some((a) => a.jobId === job.id);
+  const isSaved = savedJobIds.includes(job?.id);
+  const isAlreadyApplied = applications.some((a) => a.jobId === job?.id);
   const isOwner =
-    user?.email?.trim().toLowerCase() === job.postedBy?.trim().toLowerCase();
+    !!user?.email &&
+    !!job?.postedBy &&
+    user.email.trim().toLowerCase() === job.postedBy.trim().toLowerCase();
 
   const seekerSkillNames = skills.map((s) => s.name.toLowerCase());
 
   const handleShare = async () => {
+    if (!job) return;
     try {
       await Share.share({
         message: `Check out this job opportunity on CamWork: ${job.title} at ${job.company} (${job.location})`,
@@ -63,7 +72,47 @@ export default function JobDetailScreen() {
     }
   };
 
+  const handleDeleteJob = () => {
+    if (!job) return;
+    Alert.alert(
+      language === "EN" ? "Delete Job Offer" : "Supprimer l'offre d'emploi",
+      language === "EN"
+        ? `Are you sure you want to delete "${job.title}"? This action cannot be undone.`
+        : `Voulez-vous vraiment supprimer l'offre "${job.title}" ? Cette action est irréversible.`,
+      [
+        { text: language === "EN" ? "Cancel" : "Annuler", style: "cancel" },
+        {
+          text: language === "EN" ? "Delete" : "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await deleteJob(job.id);
+              setIsDeleting(false);
+              Alert.alert(
+                language === "EN" ? "Offer Deleted" : "Offre supprimée",
+                language === "EN"
+                  ? "The job offer has been successfully deleted."
+                  : "L'offre d'emploi a été supprimée avec succès.",
+              );
+              router.back();
+            } catch (error) {
+              setIsDeleting(false);
+              Alert.alert(
+                language === "EN" ? "Error" : "Erreur",
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete job offer.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleApplyPress = () => {
+    if (!job) return;
     if (user?.role === "employer") {
       startConversation(job.company, job.company, job.title, job.postedBy).then(
         (conversationId) =>
@@ -79,6 +128,19 @@ export default function JobDetailScreen() {
       params: { id: job.id },
     });
   };
+
+  if (!job) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.navBar}>
+          <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
+            <ArrowLeft size={22} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>Job Not Found</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -96,6 +158,16 @@ export default function JobDetailScreen() {
           {job.company}
         </Text>
         <View style={styles.navActions}>
+          {isOwner && (
+            <TouchableOpacity
+              style={[styles.navBtn, styles.deleteNavBtn]}
+              onPress={handleDeleteJob}
+              disabled={isDeleting}
+              accessibilityLabel="Delete job offer"
+            >
+              <Trash2 size={19} color={theme.colors.error} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.navBtn} onPress={handleShare}>
             <Share2 size={20} color={theme.colors.text} />
           </TouchableOpacity>
@@ -265,37 +337,68 @@ export default function JobDetailScreen() {
       </ScrollView>
 
       {/* Floating Action Footer */}
-      <View style={styles.floatingFooter}>
-        {isOwner && (
+      <View
+        style={[
+          styles.floatingFooter,
+          {
+            paddingBottom:
+              Math.max(insets.bottom, 14) + (insets.bottom > 0 ? 6 : 4),
+          },
+        ]}
+      >
+        {isOwner ? (
+          <View style={styles.ownerActionsRow}>
+            <TouchableOpacity
+              style={styles.deletePostButton}
+              onPress={handleDeleteJob}
+              disabled={isDeleting}
+              activeOpacity={0.85}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color={theme.colors.error} />
+              ) : (
+                <>
+                  <Trash2 size={17} color={theme.colors.error} />
+                  <Text style={styles.deletePostText}>
+                    {language === "EN" ? "Delete Offer" : "Supprimer"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.editPostButton}
+              onPress={() =>
+                router.push({ pathname: "/post-job", params: { id: job.id } })
+              }
+              activeOpacity={0.85}
+            >
+              <Edit3 size={17} color={theme.colors.primary} />
+              <Text style={styles.editPostText}>
+                {language === "EN" ? "Edit Post" : "Modifier"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
           <TouchableOpacity
-            style={styles.editPostButton}
-            onPress={() =>
-              router.push({ pathname: "/post-job", params: { id: job.id } })
-            }
+            style={[
+              styles.applyMainBtn,
+              isAlreadyApplied && styles.applyMainBtnDisabled,
+            ]}
+            onPress={handleApplyPress}
+            disabled={isAlreadyApplied}
+            activeOpacity={0.9}
           >
-            <Text style={styles.editPostText}>Edit post</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[
-            styles.applyMainBtn,
-            isAlreadyApplied && styles.applyMainBtnDisabled,
-          ]}
-          onPress={handleApplyPress}
-          disabled={isAlreadyApplied || isOwner}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.applyMainBtnText}>
-            {isOwner
-              ? "Your job post"
-              : user?.role === "employer"
+            <Text style={styles.applyMainBtnText}>
+              {user?.role === "employer"
                 ? "Contact service seeker"
                 : isAlreadyApplied
                   ? t.jobDetail.appliedAlready
                   : t.jobDetail.applyNow}
-          </Text>
-          {!isAlreadyApplied && <ArrowRight size={20} color="#ffffff" />}
-        </TouchableOpacity>
+            </Text>
+            {!isAlreadyApplied && <ArrowRight size={20} color="#ffffff" />}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -534,6 +637,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748b",
   },
+  deleteNavBtn: {
+    backgroundColor: "#fee2e2",
+  },
   floatingFooter: {
     position: "absolute",
     bottom: 0,
@@ -550,17 +656,47 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
-  editPostButton: {
-    minHeight: 48,
-    paddingHorizontal: 16,
+  ownerActionsRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  deletePostButton: {
+    flex: 1,
+    minHeight: 52,
+    paddingHorizontal: 14,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    backgroundColor: "#fff",
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#fecaca",
+    backgroundColor: "#fff5f5",
   },
-  editPostText: { color: theme.colors.primary, fontWeight: "800" },
+  deletePostText: {
+    color: theme.colors.error,
+    fontWeight: "800",
+    fontSize: 14,
+  },
+  editPostButton: {
+    flex: 1.3,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryLight,
+  },
+  editPostText: {
+    color: theme.colors.primary,
+    fontWeight: "800",
+    fontSize: 14,
+  },
   applyMainBtn: {
     backgroundColor: theme.colors.primary,
     height: 54,

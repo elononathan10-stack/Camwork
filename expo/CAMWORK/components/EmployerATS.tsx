@@ -485,10 +485,12 @@ export const EmployerATS: React.FC<EmployerATSProps> = ({
             />
             <TextInput
               style={styles.input}
-              placeholder="Salary (XAF)"
+              placeholder="Compensation (Figures in XAF)"
               keyboardType="number-pad"
               value={jobForm.salary}
-              onChangeText={(text) => setJobForm({ ...jobForm, salary: text })}
+              onChangeText={(text) =>
+                setJobForm({ ...jobForm, salary: text.replace(/[^0-9]/g, "") })
+              }
             />
             <TextInput
               style={styles.input}

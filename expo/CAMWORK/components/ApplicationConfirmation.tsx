@@ -1,6 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from "react-native";
-import { CheckCircle2, ArrowRight, Briefcase, Search, Sparkles } from "lucide-react-native";
+import {
+  CheckCircle2,
+  Briefcase,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react-native";
 import { theme } from "./theme";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -8,6 +14,7 @@ interface ConfirmationModalProps {
   visible: boolean;
   onClose: () => void;
   onBrowseMore?: () => void;
+  onExit?: () => void;
   jobTitle: string;
   companyName: string;
 }
@@ -16,6 +23,7 @@ const ApplicationConfirmation = ({
   visible,
   onClose,
   onBrowseMore,
+  onExit,
   jobTitle,
   companyName,
 }: ConfirmationModalProps) => {
@@ -34,13 +42,16 @@ const ApplicationConfirmation = ({
           <Text style={styles.subtitle}>
             {language === "EN" ? (
               <>
-                Your application for <Text style={styles.bold}>{jobTitle}</Text> at{" "}
-                <Text style={styles.bold}>{companyName}</Text> has been successfully transmitted.
+                Your application for <Text style={styles.bold}>{jobTitle}</Text>{" "}
+                at <Text style={styles.bold}>{companyName}</Text> has been
+                successfully transmitted.
               </>
             ) : (
               <>
-                Votre candidature pour le poste <Text style={styles.bold}>{jobTitle}</Text> chez{" "}
-                <Text style={styles.bold}>{companyName}</Text> a bien été transmise.
+                Votre candidature pour le poste{" "}
+                <Text style={styles.bold}>{jobTitle}</Text> chez{" "}
+                <Text style={styles.bold}>{companyName}</Text> a bien été
+                transmise.
               </>
             )}
           </Text>
@@ -56,9 +67,15 @@ const ApplicationConfirmation = ({
           </View>
 
           {/* Action Buttons */}
-          <TouchableOpacity style={styles.mainBtn} onPress={onClose} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.mainBtn}
+            onPress={onClose}
+            activeOpacity={0.85}
+          >
             <Briefcase size={18} color="#ffffff" />
-            <Text style={styles.mainBtnText}>{t.applyFlow.goToApplications}</Text>
+            <Text style={styles.mainBtnText}>
+              {t.applyFlow.goToApplications}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -67,7 +84,18 @@ const ApplicationConfirmation = ({
             activeOpacity={0.7}
           >
             <Search size={16} color={theme.colors.primary} />
-            <Text style={styles.secondaryBtnText}>{t.applyFlow.browseMore}</Text>
+            <Text style={styles.secondaryBtnText}>
+              {t.applyFlow.browseMore}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.exitBtn}
+            onPress={onExit || onClose}
+            activeOpacity={0.7}
+          >
+            <X size={16} color="#64748b" />
+            <Text style={styles.exitBtnText}>Exit</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -160,6 +188,17 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: "700",
     fontSize: 14,
+  },
+  exitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+  },
+  exitBtnText: {
+    color: "#64748b",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });
 

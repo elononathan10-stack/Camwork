@@ -14,6 +14,7 @@ import {
   Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ArrowLeft,
   Briefcase,
@@ -34,6 +35,7 @@ export default function ApplyJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { jobs, user, applyToJob, startConversation } = useUser();
   const { language, t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   const job = jobs.find((j) => j.id === id);
 
@@ -69,12 +71,11 @@ export default function ApplyJobScreen() {
   };
 
   const handleCloseConfirmation = async () => {
+    setIsConfirmationVisible(false);
     if (!job) {
-      setIsConfirmationVisible(false);
-      router.replace("/(tabs)/search");
+      router.replace("/(tabs)");
       return;
     }
-    setIsConfirmationVisible(false);
     const conversationId = await startConversation(
       job.company,
       job.company,
@@ -92,8 +93,13 @@ export default function ApplyJobScreen() {
     router.replace("/(tabs)/search");
   };
 
+  const handleExit = () => {
+    setIsConfirmationVisible(false);
+    router.replace("/(tabs)");
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="dark-content" />
       {/* Top Navbar */}
       <View style={styles.navBar}>
@@ -227,10 +233,11 @@ export default function ApplyJobScreen() {
         visible={isConfirmationVisible}
         onClose={handleCloseConfirmation}
         onBrowseMore={handleBrowseMore}
+        onExit={handleExit}
         jobTitle={job?.title || "Job"}
         companyName={job?.company || "CamWork"}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

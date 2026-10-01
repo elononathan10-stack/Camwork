@@ -2,6 +2,7 @@ import express from "express";
 import Application from "./applicationmodel.js";
 import Job from "../job/jobmodel.js";
 import Payment from "../payment/paymentmodel.js";
+import User from "../user/usermodel.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const applicationrouter = express.Router();
@@ -37,7 +38,31 @@ applicationrouter.get("/", async (req, res) => {
           : { applicantEmail: req.auth.email },
       order: [["createdAt", "DESC"]],
     });
-    return res.json(applications);
+    const applicantEmails = applications.map(
+      (application) => application.applicantEmail,
+    );
+    const applicants = await User.findAll({
+      where: { email: applicantEmails },
+      attributes: ["name", "email", "headline", "bio", "location", "skills"],
+    });
+    const applicantByEmail = new Map(
+      applicants.map((applicant) => [applicant.email, applicant]),
+    );
+    return res.json(
+      applications.map((application) => {
+        const applicant = applicantByEmail.get(application.applicantEmail);
+        return {
+          ...application.toJSON(),
+          applicantName: applicant?.name || application.applicantEmail,
+          applicantHeadline: applicant?.headline || null,
+          applicantBio: applicant?.bio || null,
+          applicantLocation: applicant?.location || application.location,
+          applicantSkills: applicant?.skills
+            ? JSON.parse(applicant.skills)
+            : [],
+        };
+      }),
+    );
   } catch {
     return res.status(500).json({ error: "Unable to load applications." });
   }
@@ -159,8 +184,11 @@ applicationrouter.patch("/:id/completion", async (req, res) => {
       .json({ error: "Completion requires an escrow payment." });
   const rating = Number(req.body.rating);
   if (!Number.isInteger(rating) || rating < 1 || rating > 5)
-    return res.status(422).json({ error: "Please provide a rating from 1 to 5." });
-  const review = typeof req.body.review === "string" ? req.body.review.trim() : "";
+    return res
+      .status(422)
+      .json({ error: "Please provide a rating from 1 to 5." });
+  const review =
+    typeof req.body.review === "string" ? req.body.review.trim() : "";
   const payoutMethod = req.body.payoutMethod;
   const payoutAccount = String(req.body.payoutAccount || "").trim();
   if (isSeeker && (!payoutMethod || !payoutAccount))
@@ -182,11 +210,14 @@ applicationrouter.patch("/:id/completion", async (req, res) => {
     [confirmationField]: true,
     [isEmployer ? "employerRating" : "seekerRating"]: rating,
     [isEmployer ? "employerReview" : "seekerReview"]: review || null,
-    ...(isSeeker ? { payoutMethod, payoutAccount, seekerValidated: true } : { employerValidated: true }),
+    ...(isSeeker
+      ? { payoutMethod, payoutAccount, seekerValidated: true }
+      : { employerValidated: true }),
   };
   const next = { ...application.toJSON(), ...confirmationUpdate };
-  const bothConfirmed =
-    Boolean(next.employerCompletionConfirmed && next.seekerCompletionConfirmed);
+  const bothConfirmed = Boolean(
+    next.employerCompletionConfirmed && next.seekerCompletionConfirmed,
+  );
   const transaction = await Application.sequelize.transaction();
   try {
     let payment = null;
@@ -231,7 +262,8 @@ applicationrouter.patch("/:id/completion", async (req, res) => {
       if (job) await job.update({ status: "completed" }, { transaction });
     }
     await transaction.commit();
-    const updatedPayment = bothConfirmed && payment ? await Payment.findByPk(payment.id) : payment;
+    const updatedPayment =
+      bothConfirmed && payment ? await Payment.findByPk(payment.id) : payment;
     return res.json({
       application,
       payment: updatedPayment,

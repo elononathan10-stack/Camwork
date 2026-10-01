@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Keyboard,
+  Modal,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -57,12 +58,14 @@ export default function PaymentScreen() {
   const requestedApplicationId = Array.isArray(params.applicationId)
     ? params.applicationId[0]
     : params.applicationId;
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | undefined>(
-    requestedApplicationId,
-  );
+  const [selectedApplicationId, setSelectedApplicationId] = useState<
+    string | undefined
+  >(requestedApplicationId);
   const [status, setStatus] = useState<"idle" | "processing" | "paid">("idle");
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
   const [refreshing, setRefreshing] = useState(false);
+  const [isPinModalVisible, setIsPinModalVisible] = useState(false);
+  const [paymentPin, setPaymentPin] = useState("");
 
   // Applications that can be funded by employer
   const fundableApplications = useMemo(() => {
@@ -81,7 +84,9 @@ export default function PaymentScreen() {
   useEffect(() => {
     if (!selectedApplicationId && fundableApplications.length > 0) {
       setSelectedApplicationId(fundableApplications[0].id);
-      const cleanSalary = escrowAmountFromSalary(fundableApplications[0].salary);
+      const cleanSalary = escrowAmountFromSalary(
+        fundableApplications[0].salary,
+      );
       if (cleanSalary && Number(cleanSalary) > 0) {
         setAmount(cleanSalary);
       }
@@ -128,8 +133,14 @@ export default function PaymentScreen() {
   };
 
   const handleSavePaymentMethod = () => {
-    if ((method === "mtn-mobile-money" || method === "orange-money") && !phoneNumber.trim()) {
-      Alert.alert("Phone number required", "Please enter your Mobile Money phone number.");
+    if (
+      (method === "mtn-mobile-money" || method === "orange-money") &&
+      !phoneNumber.trim()
+    ) {
+      Alert.alert(
+        "Phone number required",
+        "Please enter your Mobile Money phone number.",
+      );
       return;
     }
     setIsMethodSaved(true);
@@ -145,10 +156,13 @@ export default function PaymentScreen() {
     );
   };
 
-  const handleFundEscrow = async () => {
+  const handleFundEscrow = () => {
     const cleanAmount = amount.replace(/[^0-9]/g, "");
     if (!cleanAmount || Number(cleanAmount) <= 0) {
-      Alert.alert("Invalid Amount", "Please enter a valid payment amount in FCFA.");
+      Alert.alert(
+        "Invalid Amount",
+        "Please enter a valid payment amount in FCFA.",
+      );
       return;
     }
 
@@ -158,12 +172,18 @@ export default function PaymentScreen() {
     }
 
     if (user?.role === "employer" && !selectedApplicationId) {
-      Alert.alert("Select Job Offer", "Please choose an applicant to fund into escrow.");
+      Alert.alert(
+        "Select Job Offer",
+        "Please choose an applicant to fund into escrow.",
+      );
       return;
     }
 
     const requiredAmount = escrowAmountFromSalary(selectedApplication?.salary);
-    if (user?.role === "employer" && (!selectedApplication || cleanAmount !== requiredAmount)) {
+    if (
+      user?.role === "employer" &&
+      (!selectedApplication || cleanAmount !== requiredAmount)
+    ) {
       Alert.alert(
         "Use the offer amount",
         "Escrow must be funded with the compensation stated in the selected job offer.",
@@ -171,6 +191,18 @@ export default function PaymentScreen() {
       return;
     }
 
+    setPaymentPin("");
+    setIsPinModalVisible(true);
+  };
+
+  const confirmPaymentPin = async () => {
+    if (!/^\d{4}$/.test(paymentPin)) {
+      Alert.alert("PIN required", "Enter the 4-digit payment PIN to continue.");
+      return;
+    }
+
+    const cleanAmount = amount.replace(/[^0-9]/g, "");
+    setIsPinModalVisible(false);
     setStatus("processing");
     try {
       await fundEscrowPayment({
@@ -222,8 +254,8 @@ export default function PaymentScreen() {
         <View style={styles.trustTextWrap}>
           <Text style={styles.trustTitle}>CamWork Protected Escrow</Text>
           <Text style={styles.trustDescription}>
-            Funds are secured in escrow before work begins and automatically released only when both
-            parties confirm completion.
+            Funds are secured in escrow before work begins and automatically
+            released only when both parties confirm completion.
           </Text>
         </View>
       </View>
@@ -235,7 +267,9 @@ export default function PaymentScreen() {
             <Lock size={15} color="#0284c7" />
           </View>
           <Text style={styles.statLabel}>In Escrow</Text>
-          <Text style={styles.statValue}>{totalHeldInEscrow.toLocaleString()} FCFA</Text>
+          <Text style={styles.statValue}>
+            {totalHeldInEscrow.toLocaleString()} FCFA
+          </Text>
           <Text style={styles.statSub}>Held securely</Text>
         </View>
 
@@ -244,7 +278,9 @@ export default function PaymentScreen() {
             <CheckCircle2 size={15} color="#15803d" />
           </View>
           <Text style={styles.statLabel}>Released</Text>
-          <Text style={styles.statValue}>{totalReleased.toLocaleString()} FCFA</Text>
+          <Text style={styles.statValue}>
+            {totalReleased.toLocaleString()} FCFA
+          </Text>
           <Text style={styles.statSub}>Completed payouts</Text>
         </View>
       </View>
@@ -258,14 +294,19 @@ export default function PaymentScreen() {
       <View style={styles.methodsContainer}>
         {/* MTN MoMo */}
         <TouchableOpacity
-          style={[styles.methodCard, method === "mtn-mobile-money" && styles.methodCardActive]}
+          style={[
+            styles.methodCard,
+            method === "mtn-mobile-money" && styles.methodCardActive,
+          ]}
           onPress={() => {
             setMethod("mtn-mobile-money");
             setIsMethodSaved(false);
           }}
           activeOpacity={0.7}
         >
-          <View style={[styles.methodIconBadge, { backgroundColor: "#fef08a" }]}>
+          <View
+            style={[styles.methodIconBadge, { backgroundColor: "#fef08a" }]}
+          >
             <Phone size={18} color="#854d0e" />
           </View>
           <View style={styles.methodInfo}>
@@ -281,14 +322,19 @@ export default function PaymentScreen() {
 
         {/* Orange Money */}
         <TouchableOpacity
-          style={[styles.methodCard, method === "orange-money" && styles.methodCardActive]}
+          style={[
+            styles.methodCard,
+            method === "orange-money" && styles.methodCardActive,
+          ]}
           onPress={() => {
             setMethod("orange-money");
             setIsMethodSaved(false);
           }}
           activeOpacity={0.7}
         >
-          <View style={[styles.methodIconBadge, { backgroundColor: "#ffedd5" }]}>
+          <View
+            style={[styles.methodIconBadge, { backgroundColor: "#ffedd5" }]}
+          >
             <Phone size={18} color="#c2410c" />
           </View>
           <View style={styles.methodInfo}>
@@ -304,14 +350,19 @@ export default function PaymentScreen() {
 
         {/* Bank Card */}
         <TouchableOpacity
-          style={[styles.methodCard, method === "card" && styles.methodCardActive]}
+          style={[
+            styles.methodCard,
+            method === "card" && styles.methodCardActive,
+          ]}
           onPress={() => {
             setMethod("card");
             setIsMethodSaved(false);
           }}
           activeOpacity={0.7}
         >
-          <View style={[styles.methodIconBadge, { backgroundColor: "#e0e7ff" }]}>
+          <View
+            style={[styles.methodIconBadge, { backgroundColor: "#e0e7ff" }]}
+          >
             <CreditCard size={18} color="#4338ca" />
           </View>
           <View style={styles.methodInfo}>
@@ -328,7 +379,9 @@ export default function PaymentScreen() {
         {/* Phone / Account Number Input */}
         {(method === "mtn-mobile-money" || method === "orange-money") && (
           <View style={styles.inputWrap}>
-            <Text style={styles.inputLabel}>Mobile Money Number (Cameroon)</Text>
+            <Text style={styles.inputLabel}>
+              Mobile Money Number (Cameroon)
+            </Text>
             <View style={styles.phoneInputBox}>
               <Text style={styles.phonePrefix}>+237</Text>
               <TextInput
@@ -353,11 +406,21 @@ export default function PaymentScreen() {
         )}
 
         <TouchableOpacity
-          style={[styles.saveMethodBtn, isMethodSaved && styles.saveMethodBtnActive]}
+          style={[
+            styles.saveMethodBtn,
+            isMethodSaved && styles.saveMethodBtnActive,
+          ]}
           onPress={handleSavePaymentMethod}
         >
-          <Text style={[styles.saveMethodBtnText, isMethodSaved && styles.saveMethodBtnTextActive]}>
-            {isMethodSaved ? "Payment Method Active" : "Save Preferred Payment Method"}
+          <Text
+            style={[
+              styles.saveMethodBtnText,
+              isMethodSaved && styles.saveMethodBtnTextActive,
+            ]}
+          >
+            {isMethodSaved
+              ? "Payment Method Active"
+              : "Save Preferred Payment Method"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -373,16 +436,19 @@ export default function PaymentScreen() {
           {fundableApplications.length === 0 ? (
             <View style={styles.noAppsBox}>
               <CheckCircle2 size={24} color="#059669" />
-              <Text style={styles.noAppsTitle}>All Active Contracts Funded</Text>
+              <Text style={styles.noAppsTitle}>
+                All Active Contracts Funded
+              </Text>
               <Text style={styles.noAppsSub}>
-                When you accept new applicants from your dashboard, they will appear here ready to
-                be funded into escrow.
+                When you accept new applicants from your dashboard, they will
+                appear here ready to be funded into escrow.
               </Text>
             </View>
           ) : (
             <View style={styles.fundingCard}>
               <Text style={styles.fundingSubtitle}>
-                Select an applicant to deposit the agreed compensation into escrow:
+                Select an applicant to deposit the agreed compensation into
+                escrow:
               </Text>
 
               {fundableApplications.map((app) => {
@@ -390,7 +456,10 @@ export default function PaymentScreen() {
                 return (
                   <TouchableOpacity
                     key={app.id}
-                    style={[styles.appOptionCard, isSelected && styles.appOptionCardSelected]}
+                    style={[
+                      styles.appOptionCard,
+                      isSelected && styles.appOptionCardSelected,
+                    ]}
                     onPress={() => handleSelectApplication(app.id)}
                     activeOpacity={0.7}
                   >
@@ -401,7 +470,8 @@ export default function PaymentScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.appOptionJob}>{app.jobTitle}</Text>
                         <Text style={styles.appOptionApplicant}>
-                          {app.applicantEmail || "Applicant"} • {app.companyName}
+                          {app.applicantEmail || "Applicant"} •{" "}
+                          {app.companyName}
                         </Text>
                       </View>
                     </View>
@@ -419,9 +489,12 @@ export default function PaymentScreen() {
 
               {/* Amount Input */}
               <View style={styles.amountInputWrap}>
-                <Text style={styles.inputLabel}>Escrow Deposit Amount (FCFA)</Text>
+                <Text style={styles.inputLabel}>
+                  Escrow Deposit Amount (FCFA)
+                </Text>
                 <Text style={styles.offerAmountHint}>
-                  Matches this job offer: {selectedApplication?.salary || "Select an applicant"}
+                  Matches this job offer:{" "}
+                  {selectedApplication?.salary || "Select an applicant"}
                 </Text>
                 <View style={styles.amountInputBox}>
                   <Text style={styles.currencySymbol}>FCFA</Text>
@@ -448,13 +521,19 @@ export default function PaymentScreen() {
                 {status === "processing" ? (
                   <View style={styles.btnRow}>
                     <ActivityIndicator size="small" color="#fff" />
-                    <Text style={styles.fundButtonText}>Securing Funds in Escrow...</Text>
+                    <Text style={styles.fundButtonText}>
+                      Securing Funds in Escrow...
+                    </Text>
                   </View>
                 ) : (
                   <View style={styles.btnRow}>
                     <ShieldCheck size={18} color="#fff" />
                     <Text style={styles.fundButtonText}>
-                      Deposit {Number(amount.replace(/[^0-9]/g, "") || 0).toLocaleString()} FCFA in Escrow
+                      Deposit{" "}
+                      {Number(
+                        amount.replace(/[^0-9]/g, "") || 0,
+                      ).toLocaleString()}{" "}
+                      FCFA in Escrow
                     </Text>
                   </View>
                 )}
@@ -470,9 +549,10 @@ export default function PaymentScreen() {
             <Text style={styles.sectionTitle}>Worker Escrow Payouts</Text>
           </View>
           <Text style={styles.seekerPayoutDesc}>
-            When an employer hires you, they deposit the compensation into escrow first. As soon as
-            both you and the employer confirm job completion, your funds are immediately released to
-            your configured payment account.
+            When an employer hires you, they deposit the compensation into
+            escrow first. As soon as both you and the employer confirm job
+            completion, your funds are immediately released to your configured
+            payment account.
           </Text>
         </View>
       )}
@@ -489,11 +569,17 @@ export default function PaymentScreen() {
           {(["All", "held", "released", "completed"] as const).map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.filterTab, activeFilter === tab && styles.filterTabActive]}
+              style={[
+                styles.filterTab,
+                activeFilter === tab && styles.filterTabActive,
+              ]}
               onPress={() => setActiveFilter(tab)}
             >
               <Text
-                style={[styles.filterTabText, activeFilter === tab && styles.filterTabTextActive]}
+                style={[
+                  styles.filterTabText,
+                  activeFilter === tab && styles.filterTabTextActive,
+                ]}
               >
                 {tab === "All"
                   ? "All"
@@ -512,7 +598,8 @@ export default function PaymentScreen() {
 
   const renderPaymentItem = ({ item }: { item: PaymentItem }) => {
     const isHeld = item.status === "held";
-    const isReleased = item.status === "released" || item.status === "completed";
+    const isReleased =
+      item.status === "released" || item.status === "completed";
     const numericAmount = Number(item.amount) || 0;
 
     return (
@@ -538,14 +625,19 @@ export default function PaymentScreen() {
           </View>
 
           <View style={styles.txInfo}>
-            <Text style={styles.txTitle}>{item.jobTitle || "Job Escrow Payment"}</Text>
+            <Text style={styles.txTitle}>
+              {item.jobTitle || "Job Escrow Payment"}
+            </Text>
             <Text style={styles.txMeta}>
               {item.method === "mtn-mobile-money"
                 ? "MTN MoMo"
                 : item.method === "orange-money"
                   ? "Orange Money"
                   : "Bank Card"}{" "}
-              • {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "Recent"}
+              •{" "}
+              {item.createdAt
+                ? new Date(item.createdAt).toLocaleDateString()
+                : "Recent"}
             </Text>
             {item.applicantEmail && (
               <Text style={styles.txCounterparty}>
@@ -556,7 +648,9 @@ export default function PaymentScreen() {
         </View>
 
         <View style={styles.txRight}>
-          <Text style={styles.txAmount}>{numericAmount.toLocaleString()} FCFA</Text>
+          <Text style={styles.txAmount}>
+            {numericAmount.toLocaleString()} FCFA
+          </Text>
           <View
             style={[
               styles.statusBadge,
@@ -634,6 +728,54 @@ export default function PaymentScreen() {
           />
         }
       />
+
+      <Modal
+        visible={isPinModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPinModalVisible(false)}
+      >
+        <View style={styles.pinOverlay}>
+          <View style={styles.pinModal}>
+            <View style={styles.pinIcon}>
+              <Lock size={22} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.pinTitle}>Confirm escrow payment</Text>
+            <Text style={styles.pinDescription}>
+              Enter your 4-digit payment PIN to authorize the simulated deposit
+              of {Number(amount.replace(/[^0-9]/g, "") || 0).toLocaleString()}{" "}
+              FCFA.
+            </Text>
+            <TextInput
+              value={paymentPin}
+              onChangeText={(value) =>
+                setPaymentPin(value.replace(/\D/g, "").slice(0, 4))
+              }
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={4}
+              autoFocus
+              placeholder="••••"
+              placeholderTextColor="#94a3b8"
+              style={styles.pinInput}
+            />
+            <View style={styles.pinActions}>
+              <TouchableOpacity
+                style={styles.pinCancelButton}
+                onPress={() => setIsPinModalVisible(false)}
+              >
+                <Text style={styles.pinCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.pinConfirmButton}
+                onPress={confirmPaymentPin}
+              >
+                <Text style={styles.pinConfirmText}>Confirm payment</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -669,6 +811,77 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
+  pinOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+  },
+  pinModal: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+  },
+  pinIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primaryLight,
+    marginBottom: 12,
+  },
+  pinTitle: {
+    color: theme.colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  pinDescription: {
+    color: "#64748b",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+    marginTop: 8,
+  },
+  pinInput: {
+    width: 150,
+    height: 52,
+    marginTop: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    color: theme.colors.text,
+    fontSize: 24,
+    fontWeight: "900",
+    letterSpacing: 8,
+    textAlign: "center",
+  },
+  pinActions: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    marginTop: 20,
+  },
+  pinCancelButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9",
+  },
+  pinCancelText: { color: "#475569", fontWeight: "800" },
+  pinConfirmButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+  },
+  pinConfirmText: { color: "#ffffff", fontWeight: "800", textAlign: "center" },
   headerContent: {
     gap: 16,
     marginBottom: 12,
@@ -847,7 +1060,11 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     backgroundColor: theme.colors.primaryLight,
   },
-  doneButtonText: { color: theme.colors.primary, fontSize: 12, fontWeight: "800" },
+  doneButtonText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
   saveMethodBtn: {
     marginTop: 6,
     height: 42,

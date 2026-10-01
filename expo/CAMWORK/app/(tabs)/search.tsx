@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
+  Alert,
   StyleSheet,
   View,
   Text,
@@ -24,11 +25,15 @@ import {
   Building,
   Sparkles,
   Zap,
+  Users,
 } from "lucide-react-native";
 import { theme } from "@/components/theme";
 import { useUser, JobListing } from "@/context/UserContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { searchWorkersApi } from "@/components/api";
+
+type Worker = { id: number; name: string; email: string };
 
 const CATEGORIES = [
   "All",
@@ -97,6 +102,10 @@ export default function SearchScreen() {
     (selectedLocation !== "All" ? 1 : 0) +
     (selectedType !== "All" ? 1 : 0);
 
+  if (user?.role === "employer") {
+    return <EmployerTalentScreen />;
+  }
+
   const clearAllFilters = () => {
     setSelectedCategory("All");
     setSelectedLocation("All");
@@ -119,7 +128,9 @@ export default function SearchScreen() {
             <Bookmark
               size={20}
               color={theme.colors.primary}
-              fill={savedJobIds.length > 0 ? theme.colors.primary : "transparent"}
+              fill={
+                savedJobIds.length > 0 ? theme.colors.primary : "transparent"
+              }
             />
             {savedJobIds.length > 0 && (
               <View style={styles.favBadge}>
@@ -466,6 +477,101 @@ export default function SearchScreen() {
   );
 }
 
+function EmployerTalentScreen() {
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState("");
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = useCallback(async (value: string) => {
+    setLoading(true);
+    try {
+      setWorkers(await searchWorkersApi(value));
+    } catch (error) {
+      Alert.alert(
+        "Talent unavailable",
+        error instanceof Error ? error.message : "Unable to find job seekers.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void search("");
+  }, [search]);
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Talent</Text>
+          <Users size={22} color={theme.colors.primary} />
+        </View>
+        <View style={styles.searchRow}>
+          <View style={styles.searchInputWrap}>
+            <SearchIcon size={20} color="#94a3b8" />
+            <TextInput
+              placeholder="Search job seekers"
+              style={styles.searchInput}
+              placeholderTextColor="#94a3b8"
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={() => void search(query)}
+              returnKeyType="search"
+            />
+          </View>
+        </View>
+        <FlatList
+          data={workers}
+          keyExtractor={(item) => String(item.id)}
+          refreshing={loading}
+          onRefresh={() => void search(query)}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.talentCard}
+              onPress={() =>
+                router.push({
+                  pathname: "/worker-profile",
+                  params: {
+                    id: String(item.id),
+                    name: item.name,
+                    email: item.email,
+                  },
+                })
+              }
+              activeOpacity={0.85}
+            >
+              <View style={styles.talentAvatar}>
+                <Text style={styles.talentAvatarText}>
+                  {item.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.talentInfo}>
+                <Text style={styles.talentName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text style={styles.talentEmail} numberOfLines={1}>
+                  {item.email}
+                </Text>
+              </View>
+              <Text style={styles.viewProfile}>View profile</Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <Text style={styles.emptyTalent}>
+              No verified job seekers match this search.
+            </Text>
+          }
+        />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { flex: 1, paddingHorizontal: 18, paddingTop: 4 },
@@ -610,6 +716,53 @@ const styles = StyleSheet.create({
   listContent: {
     gap: 12,
     paddingBottom: 24,
+  },
+  talentCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  talentAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primaryLight,
+  },
+  talentAvatarText: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: theme.colors.primary,
+  },
+  talentInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  talentName: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.colors.text,
+  },
+  talentEmail: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  viewProfile: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: theme.colors.primary,
+  },
+  emptyTalent: {
+    textAlign: "center",
+    color: "#64748b",
+    marginTop: 40,
   },
   resultsList: {
     flex: 1,

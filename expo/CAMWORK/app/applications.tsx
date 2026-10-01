@@ -50,13 +50,13 @@ export default function ApplicationsScreen() {
     applications,
     validateApplication,
     confirmApplicationCompletion,
-    updateJobStatus,
   } = useUser();
   const { language, t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<TabFilter>("All");
-  const [completionTarget, setCompletionTarget] = useState<ApplicationItem | null>(null);
+  const [completionTarget, setCompletionTarget] =
+    useState<ApplicationItem | null>(null);
   const [rating, setRating] = useState(5);
   const [payoutMethod, setPayoutMethod] = useState<
     "mtn-mobile-money" | "orange-money" | "card"
@@ -71,53 +71,33 @@ export default function ApplicationsScreen() {
     setPayoutAccount(application.payoutAccount || user?.phone || "");
   };
 
-  const manageCompletedJob = (application: ApplicationItem) => {
-    Alert.alert(
-      "Job completed",
-      "Escrow has been released to the seeker. Would you like to reopen this offer or remove it from active listings?",
-      [
-        { text: "Keep completed", style: "cancel" },
-        {
-          text: "Remove offer",
-          style: "destructive",
-          onPress: () => updateJobStatus(application.jobId, "archived"),
-        },
-        {
-          text: "Reopen offer",
-          onPress: () => updateJobStatus(application.jobId, "open"),
-        },
-      ],
-    );
-  };
-
   const submitCompletion = async () => {
     if (!completionTarget) return;
     if (user?.role !== "employer" && !payoutAccount.trim()) {
-      Alert.alert("Payout details required", "Enter the account or phone number where you want the escrow payout sent.");
+      Alert.alert(
+        "Payout details required",
+        "Enter the account or phone number where you want the escrow payout sent.",
+      );
       return;
     }
     setSubmittingCompletion(true);
     try {
-      const savedApplication = await confirmApplicationCompletion(completionTarget.id, {
-        rating,
-        ...(user?.role === "employer"
-          ? {}
-          : { payoutMethod, payoutAccount: payoutAccount.trim() }),
-      });
+      const completionResult = await confirmApplicationCompletion(
+        completionTarget.id,
+        {
+          rating,
+          ...(user?.role === "employer"
+            ? {}
+            : { payoutMethod, payoutAccount: payoutAccount.trim() }),
+        },
+      );
+      const savedApplication = completionResult.application;
       setCompletionTarget(null);
       if (savedApplication.status === "Completed") {
         Alert.alert(
           "Escrow released",
           "Both parties confirmed completion. The seeker payout is now released.",
-          user?.role === "employer"
-            ? [
-                {
-                  text: "Manage job offer",
-                  onPress: () => manageCompletedJob(savedApplication),
-                },
-                { text: "Done" },
-              ]
-            : [{ text: "Done" }],
+          [{ text: "Done" }],
         );
       } else {
         Alert.alert(
@@ -330,14 +310,19 @@ export default function ApplicationsScreen() {
                       onPress={() => validateApplication(item.id, true)}
                     >
                       <CheckCircle2 size={14} color="#fff" />
-                      <Text style={styles.validateText}>Validate employment</Text>
+                      <Text style={styles.validateText}>
+                        Validate employment
+                      </Text>
                     </TouchableOpacity>
                   )}
                 {user?.role === "employer" &&
                   (item.status === "Accepted" || item.status === "Pending") &&
                   !item.paymentValidated && (
                     <TouchableOpacity
-                      style={[styles.validateBtn, { backgroundColor: "#0284c7" }]}
+                      style={[
+                        styles.validateBtn,
+                        { backgroundColor: "#0284c7" },
+                      ]}
                       onPress={() => router.push("/payment")}
                     >
                       <ShieldCheck size={14} color="#fff" />
@@ -359,15 +344,6 @@ export default function ApplicationsScreen() {
                       </Text>
                     </TouchableOpacity>
                   )}
-                {user?.role === "employer" && item.status === "Completed" && (
-                  <TouchableOpacity
-                    style={[styles.validateBtn, { backgroundColor: "#475569" }]}
-                    onPress={() => manageCompletedJob(item)}
-                  >
-                    <Briefcase size={14} color="#fff" />
-                    <Text style={styles.validateText}>Manage job offer</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             </View>
           );
@@ -384,19 +360,26 @@ export default function ApplicationsScreen() {
         visible={Boolean(completionTarget)}
         transparent
         animationType="fade"
-        onRequestClose={() => !submittingCompletion && setCompletionTarget(null)}
+        onRequestClose={() =>
+          !submittingCompletion && setCompletionTarget(null)
+        }
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Confirm task completion</Text>
             <Text style={styles.modalText}>
-              Confirm that {completionTarget?.jobTitle} is complete and leave a rating. Escrow releases only after both parties confirm.
+              Confirm that {completionTarget?.jobTitle} is complete and leave a
+              rating. Escrow releases only after both parties confirm.
             </Text>
             <Text style={styles.ratingLabel}>Your rating</Text>
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map((value) => (
                 <TouchableOpacity key={value} onPress={() => setRating(value)}>
-                  <Star size={30} color={value <= rating ? "#f59e0b" : "#cbd5e1"} fill={value <= rating ? "#f59e0b" : "transparent"} />
+                  <Star
+                    size={30}
+                    color={value <= rating ? "#f59e0b" : "#cbd5e1"}
+                    fill={value <= rating ? "#f59e0b" : "transparent"}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -404,34 +387,65 @@ export default function ApplicationsScreen() {
               <>
                 <Text style={styles.ratingLabel}>Payout method</Text>
                 <View style={styles.payoutMethods}>
-                  {(["mtn-mobile-money", "orange-money", "card"] as const).map((method) => (
-                    <TouchableOpacity
-                      key={method}
-                      style={[styles.payoutMethod, payoutMethod === method && styles.payoutMethodActive]}
-                      onPress={() => setPayoutMethod(method)}
-                    >
-                      <Text style={[styles.payoutMethodText, payoutMethod === method && styles.payoutMethodTextActive]}>
-                        {method === "mtn-mobile-money" ? "MTN MoMo" : method === "orange-money" ? "Orange Money" : "Bank card"}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {(["mtn-mobile-money", "orange-money", "card"] as const).map(
+                    (method) => (
+                      <TouchableOpacity
+                        key={method}
+                        style={[
+                          styles.payoutMethod,
+                          payoutMethod === method && styles.payoutMethodActive,
+                        ]}
+                        onPress={() => setPayoutMethod(method)}
+                      >
+                        <Text
+                          style={[
+                            styles.payoutMethodText,
+                            payoutMethod === method &&
+                              styles.payoutMethodTextActive,
+                          ]}
+                        >
+                          {method === "mtn-mobile-money"
+                            ? "MTN MoMo"
+                            : method === "orange-money"
+                              ? "Orange Money"
+                              : "Bank card"}
+                        </Text>
+                      </TouchableOpacity>
+                    ),
+                  )}
                 </View>
                 <TextInput
                   value={payoutAccount}
                   onChangeText={setPayoutAccount}
-                  keyboardType={payoutMethod === "card" ? "default" : "phone-pad"}
-                  placeholder={payoutMethod === "card" ? "Card or account reference" : "Mobile Money number"}
+                  keyboardType={
+                    payoutMethod === "card" ? "default" : "phone-pad"
+                  }
+                  placeholder={
+                    payoutMethod === "card"
+                      ? "Card or account reference"
+                      : "Mobile Money number"
+                  }
                   placeholderTextColor="#94a3b8"
                   style={styles.payoutInput}
                 />
               </>
             )}
             <View style={styles.modalActions}>
-              <TouchableOpacity disabled={submittingCompletion} onPress={() => setCompletionTarget(null)} style={styles.cancelButton}>
+              <TouchableOpacity
+                disabled={submittingCompletion}
+                onPress={() => setCompletionTarget(null)}
+                style={styles.cancelButton}
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity disabled={submittingCompletion} onPress={submitCompletion} style={styles.confirmButton}>
-                <Text style={styles.confirmButtonText}>{submittingCompletion ? "Saving..." : "Confirm & rate"}</Text>
+              <TouchableOpacity
+                disabled={submittingCompletion}
+                onPress={submitCompletion}
+                style={styles.confirmButton}
+              >
+                <Text style={styles.confirmButtonText}>
+                  {submittingCompletion ? "Saving..." : "Confirm & rate"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -517,22 +531,58 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.55)", justifyContent: "center", padding: 20 },
-  modalCard: { backgroundColor: "#fff", borderRadius: 20, padding: 20, gap: 12 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15,23,42,0.55)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+  },
   modalTitle: { color: theme.colors.text, fontSize: 20, fontWeight: "900" },
   modalText: { color: "#475569", lineHeight: 20 },
   ratingLabel: { color: theme.colors.text, fontWeight: "800", marginTop: 4 },
   starsRow: { flexDirection: "row", gap: 8 },
   payoutMethods: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
-  payoutMethod: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 9, paddingHorizontal: 10, paddingVertical: 8 },
-  payoutMethodActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  payoutMethod: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  payoutMethodActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
   payoutMethodText: { color: "#475569", fontSize: 12, fontWeight: "700" },
   payoutMethodTextActive: { color: "#fff" },
-  payoutInput: { height: 46, borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 10, paddingHorizontal: 12, color: theme.colors.text },
-  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 4 },
+  payoutInput: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    color: theme.colors.text,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 4,
+  },
   cancelButton: { paddingHorizontal: 14, paddingVertical: 10 },
   cancelButtonText: { color: "#475569", fontWeight: "800" },
-  confirmButton: { backgroundColor: theme.colors.primary, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  confirmButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
   confirmButtonText: { color: "#fff", fontWeight: "800" },
   cardTop: {
     flexDirection: "row",
